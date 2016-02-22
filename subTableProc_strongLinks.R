@@ -46,7 +46,7 @@ for (p in seq(1,subLim-1)){
     currLikeness=0
     
     #loop through each word in the current subreddit and compare it to the words in the next sub
-    WordInd<-match(currRed$word,scanRed$word)
+    wordInd<-match(currRed$word,scanRed$word)
     
     # find the position of scan words in the current sub list
     scanWordInd<-match(scanRed$word,currRed$word)
@@ -63,16 +63,16 @@ for (p in seq(1,subLim-1)){
     # nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
     
     ##
-#     currPer<-currRed[,3]/nMainEntries*100
-#     scanPer<-scanRed[(wordInd),3]/nEntries*100
-#     nullCurrPer<-currRed[is.na(wordInd),3]/nMainEntries*100
-#     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
+    #     currPer<-currRed[,3]/nMainEntries*100
+    #     scanPer<-scanRed[(wordInd),3]/nEntries*100
+    #     nullCurrPer<-currRed[is.na(wordInd),3]/nMainEntries*100
+    #     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
     
     ######### JUST SET THE CURRPER AS ALL OF ITS PERS, THEN THE SCANPER IS 
     # THE RE-ORDERED PERCENTAGES TO MATCH, WITH ZEROES WHERE THERE IS NO MATCH
     # AND TACK THE MISSING SCANRED WORDS ON THE END WITH MATCHING ZEROES IN THE CURRRED
     currPer<-currRed[,3]/nMainEntries*100
-    scanPer<-scanRed[(wordInd),3]/nEntries*100
+    scanPer<-scanRed[wordInd,3]/nEntries*100
     scanPer[is.na(scanPer)] <- 0
     
     
@@ -97,6 +97,11 @@ for (p in seq(1,subLim-1)){
     links[p,q]<-currLikeness
     # cat(p,q)
     count<-count+1
+    
+    currPer<-0
+    scanPer<-0
+    weights<-0
+    
   }
   #   maxLikeness[count,]<-likenessTable[which.max(likenessTable[,3]),]
   #   minLikeness[count,]<-likenessTable[which.min(likenessTable[,3]),]
