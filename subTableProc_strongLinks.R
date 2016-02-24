@@ -12,8 +12,8 @@ subLim<-nrow(subs)
 links<-data.frame(matrix(NA, nrow = subLim, ncol = subLim))
 subSize<-data.frame(sub=double(), size=double())
 likenessTable<-data.frame(wordCurr=double(),wordScan=double(),strength=double())
-maxLikeness<-data.frame(sub1=double(),sub2=double(),strength=double())
-minLikeness<-data.frame(sub1=double(),sub2=double(),strength=double())
+# maxLikeness<-data.frame(sub1=double(),sub2=double(),strength=double())
+minLikeness<-data.frame(strength=double())
 count<-0
 
 #loop through all the sub files
@@ -89,6 +89,8 @@ for (p in seq(1,subLim-1)){
     weights<-(abs(currPer-scanPer)+1)*(currPer+scanPer)
     currLikeness<-sum(weights,rm.na=TRUE)
     
+    
+    
     # currLikeness<-sum(weights,rm.na=TRUE)+sum((nullCurrPer+1)*nullCurrPer)+sum((nullScanPer+1)*nullScanPer)
     
     
@@ -98,13 +100,16 @@ for (p in seq(1,subLim-1)){
     # cat(p,q)
     count<-count+1
     
-    currPer<-0
-    scanPer<-0
-    weights<-0
     
+    minInd<-which.min(weights)
+    if (minInd<3001) {
+    minLikeness[count,]<-as.character(currRed[minInd,1])
+    }
+    else{
+      minLikeness[count,]<-as.character(scanRed[minInd-3000,1])
+    }
   }
-  #   maxLikeness[count,]<-likenessTable[which.max(likenessTable[,3]),]
-  #   minLikeness[count,]<-likenessTable[which.min(likenessTable[,3]),]
+
   
 }
 
@@ -113,11 +118,19 @@ for (p in seq(1,subLim-1)){
 names(links)<-subs$V1
 row.names(links)<-subs$V1
 
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re2.txt"
+fName<-"C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re3.txt"
 write.table(links,fName,sep=",")
 
 fName2<-"C:/Users/Ryan/Documents/R/data/rcomments/subSizes-re.txt"
 write.table(subSize,fName2,sep=",")
+
+fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/minConnection.txt"
+write.table(minLikeness,fName3,sep=",")
+
+# fName4<-"C:/Users/Ryan/Documents/R/data/rcomments/subSizes-re.txt"
+# write.table(subSize,fName2,sep=",")
+
+
 
 # fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/maxLinks.txt"
 # write.table(maxLikeness,fName3,sep=",")
