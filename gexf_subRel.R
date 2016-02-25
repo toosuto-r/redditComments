@@ -111,7 +111,7 @@ totalComm<-sum(subSizes[,2])
 
 
 for (p in seq(1,dim(nodes_df)[1])){
-  nodes_size[p]<-log(((subSizes[nodes_df[p,2]==subSizes[,1],2])/totalComm)*10000)/50
+  nodes_size[p]<-log(((subSizes[nodes_df[p,2]==as.vector(subSizes[,1]),2])/totalComm)*10000)/50
   print(p)
 }
 

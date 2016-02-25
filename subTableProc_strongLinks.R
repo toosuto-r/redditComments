@@ -7,6 +7,18 @@ ptm<-proc.time()
 subs<-read.table(file="C:/Users/Ryan/Documents/R/data/rcomments/topSubs300.txt")
 subLim<-nrow(subs)
 
+# read the full word frequency table from file
+readFName<-"C:/Users/Ryan/Documents/R/data/rcomments/fullWords.txt"
+fullWord<-read.table(file=readFName,header=TRUE, sep=",")
+
+
+# remove the "delet" entry, for it is poison
+fullWord<-fullWord[-match("delet",fullWord$word),]
+
+
+fullWordnEntry<-sum(fullWord$nentry)
+
+
 #create a table to hold the links between each sub (new subs will be seq. appended)
 # links<-data.frame(sub=double())
 links<-data.frame(matrix(NA, nrow = subLim, ncol = subLim))
@@ -22,6 +34,8 @@ for (p in seq(1,subLim-1)){
   fileLoc<-paste("~/R/data/rcomments/",currSub,".txt",sep="")
   
   currRed<-read.table(file=fileLoc,header=TRUE, sep=",")
+  currRed<-currRed[-(match("delet",currRed$word)),]
+  
   wordLim<-nrow(currRed)
   
   #number of word entries in the main sub
@@ -38,6 +52,7 @@ for (p in seq(1,subLim-1)){
     currScanSub<-as.character(subs[q,1])
     scanFileLoc<-paste("~/R/data/rcomments/",currScanSub,".txt",sep="")
     scanRed<-read.table(file=scanFileLoc,header=TRUE, sep=",")
+    scanRed<-scanRed[-(match("delet",scanRed$word)),]
     
     #get total number of word entries for the scan sub
     nEntries<-sum(scanRed$nentry)
@@ -51,23 +66,6 @@ for (p in seq(1,subLim-1)){
     # find the position of scan words in the current sub list
     scanWordInd<-match(scanRed$word,currRed$word)
     
-    
-    ## this is discarding NAs at the start - possibly faster but very very little
-    
-    # get the percentage use in the main sub of the words which have been found in both
-    # currPer<-currRed[!is.na(wordInd),3]/nMainEntries*100
-    
-    # get the percentage use of thoses words in the scan sub  
-    # scanPer<-scanRed[na.omit(wordInd),3]/nEntries*100
-    # nullCurrPer<-currRed[is.na(wordInd),3]/nMainEntries*100
-    # nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
-    
-    ##
-    #     currPer<-currRed[,3]/nMainEntries*100
-    #     scanPer<-scanRed[(wordInd),3]/nEntries*100
-    #     nullCurrPer<-currRed[is.na(wordInd),3]/nMainEntries*100
-    #     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
-    
     ######### JUST SET THE CURRPER AS ALL OF ITS PERS, THEN THE SCANPER IS 
     # THE RE-ORDERED PERCENTAGES TO MATCH, WITH ZEROES WHERE THERE IS NO MATCH
     # AND TACK THE MISSING SCANRED WORDS ON THE END WITH MATCHING ZEROES IN THE CURRRED
@@ -75,6 +73,21 @@ for (p in seq(1,subLim-1)){
     scanPer<-scanRed[wordInd,3]/nEntries*100
     scanPer[is.na(scanPer)] <- 0
     
+    # get the matching words for the weights
+    currWords<-currRed[,1]
+    scanWords<-scanRed[is.na(scanWordInd),1]
+    
+    ############################
+    # to find the true differential between words, we look for a word which is responsible 
+    # for a very small difference between the two (subsDifference), but is also substantially
+    # different from the main reddit corpus (mainDifference). The mainDifference should be the
+    # over- or under-representation of the word in the main corpus.
+    # The metric is subsDifference/mainDifference
+    # weight*currUse/mainCorpusUse?
+    # weight/((currUse-mainCorpusUse)*currUse) - big when it's close to main use, small when far away
+    #                                   and also smaller for higher-use words (currUse<- (currPer+scanPer)/2)
+    
+    ############################
     
     #then find the NAs in the scan match, put them in a new vector, match it with zeroes of the same length and cat both on the end
     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
@@ -83,13 +96,17 @@ for (p in seq(1,subLim-1)){
     currPer<-c(currPer,nullScanPerMatch)
     scanPer<-c(scanPer,nullScanPer)
     
+    #combine the matching words
+    currFullWords<-c(as.vector.factor(currWords),as.vector.factor(scanWords))
     
     # calculate the weights, modifying the difference by adding 1 
     # to ensure the resulting product is larger than the starting terms  
     weights<-(abs(currPer-scanPer)+1)*(currPer+scanPer)
     currLikeness<-sum(weights,rm.na=TRUE)
     
-    
+    currFullPer<-fullWords[match(currFullWords,fullWords$word),3]/fullWordnEntry*100
+    currUse<-(currPer+scanPer)/2
+    linksStrength<-weights/((currUse-currFullPer)*currUse)
     
     # currLikeness<-sum(weights,rm.na=TRUE)+sum((nullCurrPer+1)*nullCurrPer)+sum((nullScanPer+1)*nullScanPer)
     
@@ -101,15 +118,11 @@ for (p in seq(1,subLim-1)){
     count<-count+1
     
     
-    minInd<-which.min(weights)
-    if (minInd<3001) {
-    minLikeness[count,]<-as.character(currRed[minInd,1])
-    }
-    else{
-      minLikeness[count,]<-as.character(scanRed[minInd-3000,1])
-    }
-  }
+    minInd<-which.min(abs(linksStrength))
+    minLikeness[count,1]<-currFullWords[minInd]
 
+  }
+  
   
 }
 
@@ -126,16 +139,5 @@ write.table(subSize,fName2,sep=",")
 
 fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/minConnection.txt"
 write.table(minLikeness,fName3,sep=",")
-
-# fName4<-"C:/Users/Ryan/Documents/R/data/rcomments/subSizes-re.txt"
-# write.table(subSize,fName2,sep=",")
-
-
-
-# fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/maxLinks.txt"
-# write.table(maxLikeness,fName3,sep=",")
-# 
-# fName4<-"C:/Users/Ryan/Documents/R/data/rcomments/minLinks.txt"
-# write.table(minLikeness,fName4,sep=",")
 
 print(proc.time()-ptm)

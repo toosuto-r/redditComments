@@ -1,4 +1,4 @@
-relResults<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re2.txt", header=TRUE, sep=",")
+relResults<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re3.txt", header=TRUE, sep=",")
 
 matRes<-as.matrix(relResults)
 matRes<-log(matRes)
