@@ -83,8 +83,7 @@ nodes_att <- data.frame(DEG = V(gD)$degree, BET = V(gD)$betweenness)
 #
 # Create a dataframe with edge attributes: 1st column - attribute 1 (weight), 2nd column - attribute 2 (similarity)
 # edges_att <- data.frame(WGH = E(gD)$weight, SIM = E(gD)$similarity) 
-wei<-as.numeric(dataSet$v3)
-print(wei)
+
 edges_att <- data.frame(WGH = E(gD)$weight, SIM = E(gD)$similarity) 
 
 

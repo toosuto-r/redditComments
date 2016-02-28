@@ -14,7 +14,7 @@ firstSub<-as.character(subs[1,1])
 firstFileLoc<-paste("~/R/data/rcomments/",firstSub,".txt",sep="")
 mainRed<-read.table(file=firstFileLoc,header=TRUE,sep=",")
 
-# scan through the rest of the subs and match words
+# scan through the rest of the subs and add words
 for (p in seq(2,subLim)){
   currSub<-as.character(subs[p,1])
   fileLoc<-paste("~/R/data/rcomments/",currSub,".txt",sep="")
@@ -24,7 +24,7 @@ for (p in seq(2,subLim)){
   addedWords<-match(currRed$word,mainRed$word)
   mainRed[na.omit(addedWords),3]<-mainRed[na.omit(addedWords),3]+currRed[!is.na(addedWords),3]
   
-  # add extra words to a frame to be appaended to the end of the current frame
+  # add extra words to a frame to be appended to the end of the current frame
   extraWords<-currRed[is.na(addedWords),1]
   extraNums<-currRed[is.na(addedWords),3]
   
@@ -36,11 +36,10 @@ for (p in seq(2,subLim)){
     
 }
 
+#sort the table by descending - doesn't matter much, but gives easy viewing
 fullWords<-mainRed[order(-mainRed$nentry),]
 
 writeFName<-"C:/Users/Ryan/Documents/R/data/rcomments/fullWords.txt"
 write.table(fullWords,writeFName,sep=",")
-
-
 
 print(proc.time()-ptm)

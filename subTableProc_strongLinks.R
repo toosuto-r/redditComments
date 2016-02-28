@@ -43,11 +43,7 @@ for (p in seq(1,subLim-1)){
   nMainEntries<-sum(currRed$nentry)
   subSize[p,1]<-currSub
   subSize[p,2]<-nMainEntries
-  
-  #for determining value of missing words with booleans - maybe better to select from scanRed$nentry?
-  # nWordInd<-seq(1,wordLim)
-  
-  
+
   # go through each of the remaining subreddit files
   for (q in seq(p+1,subLim)){
     currScanSub<-as.character(subs[q,1])
@@ -59,18 +55,16 @@ for (p in seq(1,subLim-1)){
     #get total number of word entries for the scan sub
     nEntries<-sum(scanRed$nentry)
     
-    #set likeness score counter for this pair to zero
-    currLikeness=0
-    
-    #loop through each word in the current subreddit and compare it to the words in the next sub
+    # find where the current words are in the scan sub
     wordInd<-match(currRed$word,scanRed$word)
     
     # find the position of scan words in the current sub list
     scanWordInd<-match(scanRed$word,currRed$word)
     
-    ######### JUST SET THE CURRPER AS ALL OF ITS PERS, THEN THE SCANPER IS 
-    # THE RE-ORDERED PERCENTAGES TO MATCH, WITH ZEROES WHERE THERE IS NO MATCH
-    # AND TACK THE MISSING SCANRED WORDS ON THE END WITH MATCHING ZEROES IN THE CURRRED
+    # get the current percentage use of words in the main sub, and the 
+    # percentage use of unmatched words in the scan sub (i.e. 0% use) 
+    # using the matched indices for scanRed orders the table so each
+    # row of currPer and scanPer address the same word, indexed by currPer
     currPer<-currRed[,3]/nMainEntries*100
     scanPer<-scanRed[wordInd,3]/nEntries*100
     scanPer[is.na(scanPer)] <- 0
@@ -79,19 +73,8 @@ for (p in seq(1,subLim-1)){
     currWords<-currRed[,1]
     scanWords<-scanRed[is.na(scanWordInd),1]
     
-    ############################
-    # to find the true differential between words, we look for a word which is responsible 
-    # for a very small difference between the two (subsDifference), but is also substantially
-    # different from the main reddit corpus (mainDifference). The mainDifference should be the
-    # over- or under-representation of the word in the main corpus.
-    # The metric is subsDifference/mainDifference
-    # weight*currUse/mainCorpusUse?
-    # weight/((currUse-mainCorpusUse)*currUse) - big when it's close to main use, small when far away
-    #                                   and also smaller for higher-use words (currUse<- (currPer+scanPer)/2)
-    
-    ############################
-    
-    #then find the NAs in the scan match, put them in a new vector, match it with zeroes of the same length and cat both on the end
+    #then find the NAs in the scan match, put them in a new vector, 
+    # match it with zeroes of the same length and cat both on the end
     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
     nullScanPerMatch<-rep(0,length(nullScanPer))
     
@@ -106,11 +89,23 @@ for (p in seq(1,subLim-1)){
     weights<-(abs(currPer-scanPer)+1)*(currPer+scanPer)
     currLikeness<-sum(weights,rm.na=TRUE)
     
-    currFullPer<-fullWords[match(currFullWords,fullWords$word),3]/fullWordnEntry*100
+    ############################
+    # to find the true differential between words, we look for a word which is responsible 
+    # for a very small difference between the two (subsDifference), but is also substantially
+    # different from the main reddit corpus (mainDifference). The mainDifference should be the
+    # over- or under-representation of the word in the main corpus.
+    # The metric is subsDifference/mainDifference
+    # weight*currUse/mainCorpusUse?
+    # weight/((currUse-mainCorpusUse)*currUse) - big when it's close to main use, small when far away
+    #                                   and also smaller for higher-use words (currUse<- (currPer+scanPer)/2)
+    
+    ############################
+    
     currUse<-(currPer+scanPer)/2
-    linksStrength<-weights/(((currUse-currFullPer))*(currUse))
-    linksStrength<-(((currUse-currFullPer)+1)*(currUse))/weights
-
+    # currFullPer<-fullWords[match(currFullWords,fullWords$word),3]/fullWordnEntry*100
+    # linksStrength<-weights/(((currUse-currFullPer))*(currUse))
+    # linksStrength<-(((currUse-currFullPer)+1)*(currUse))/weights
+    linksStrength<-(((currUse-currFullPer)+1)*1)/weights
     
     #place the currLikeness into [p,q] of the relational table
     # print(currLikeness)
