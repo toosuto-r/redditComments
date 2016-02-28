@@ -34,6 +34,7 @@ for (p in seq(1,subLim-1)){
   fileLoc<-paste("~/R/data/rcomments/",currSub,".txt",sep="")
   
   currRed<-read.table(file=fileLoc,header=TRUE, sep=",")
+  #clear "delet"
   currRed<-currRed[-(match("delet",currRed$word)),]
   
   wordLim<-nrow(currRed)
@@ -52,6 +53,7 @@ for (p in seq(1,subLim-1)){
     currScanSub<-as.character(subs[q,1])
     scanFileLoc<-paste("~/R/data/rcomments/",currScanSub,".txt",sep="")
     scanRed<-read.table(file=scanFileLoc,header=TRUE, sep=",")
+    #clear "delet"
     scanRed<-scanRed[-(match("delet",scanRed$word)),]
     
     #get total number of word entries for the scan sub
@@ -95,7 +97,7 @@ for (p in seq(1,subLim-1)){
     
     currPer<-c(currPer,nullScanPerMatch)
     scanPer<-c(scanPer,nullScanPer)
-    
+   
     #combine the matching words
     currFullWords<-c(as.vector.factor(currWords),as.vector.factor(scanWords))
     
@@ -106,10 +108,9 @@ for (p in seq(1,subLim-1)){
     
     currFullPer<-fullWords[match(currFullWords,fullWords$word),3]/fullWordnEntry*100
     currUse<-(currPer+scanPer)/2
-    linksStrength<-weights/((currUse-currFullPer)*currUse)
-    
-    # currLikeness<-sum(weights,rm.na=TRUE)+sum((nullCurrPer+1)*nullCurrPer)+sum((nullScanPer+1)*nullScanPer)
-    
+    linksStrength<-weights/(((currUse-currFullPer))*(currUse))
+    linksStrength<-(((currUse-currFullPer)+1)*(currUse))/weights
+
     
     #place the currLikeness into [p,q] of the relational table
     # print(currLikeness)
@@ -118,7 +119,7 @@ for (p in seq(1,subLim-1)){
     count<-count+1
     
     
-    minInd<-which.min(abs(linksStrength))
+    minInd<-which.max(abs(linksStrength))
     minLikeness[count,1]<-currFullWords[minInd]
 
   }
@@ -137,7 +138,7 @@ write.table(links,fName,sep=",")
 fName2<-"C:/Users/Ryan/Documents/R/data/rcomments/subSizes-re.txt"
 write.table(subSize,fName2,sep=",")
 
-fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/minConnection.txt"
+fName3<-"C:/Users/Ryan/Documents/R/data/rcomments/minConnection3.txt"
 write.table(minLikeness,fName3,sep=",")
 
 print(proc.time()-ptm)
