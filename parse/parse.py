@@ -23,6 +23,10 @@ def toUTC(date):
     utc = int(utc.total_seconds())
     return utc
 
+# util to print with a timestamp (because I like that)
+def print_withtime (text):
+    print "%s %s " % (str(datetime.datetime.now()),text)
+
 
 
 # for a given startdate this will parse a weeks worth of comments and write to psql
@@ -41,12 +45,12 @@ def parseWeek(startdate):
     word_counts = {}
 
     # run parseComments (for two files if necessary)
-    print "parsing the comments for the week starting " + str(startdate)[:10]
+    print_withtime ("parsing the comments for the week starting %s" % (str(startdate)[:10]))
     word_counts = parseComments(file1, word_counts, toUTC(startdate), toUTC(enddate))
     if file1 != file2 and enddate.day != 1:
         word_counts = parseComments(file1, word_counts, toUTC(startdate), toUTC(enddate))
 
-    print "writing word counts for the week starting %s to database" % (str(startdate)[:10])
+    print_withtime ("writing word counts for the week starting %s to database" % (str(startdate)[:10]))
     dumpPostgres(str(startdate)[:10], word_counts)
 
 
@@ -60,7 +64,7 @@ def parseComments(file, word_counts, starttime, endtime):
             text, subreddit, time = [comment[x] for x in ['body', 'subreddit', 'created_utc']]
             time = int(time)
             if idx % 1000000 == 0:
-                print "Parsed %s comments from %s" % (idx,file)
+                print_withtime ("Parsed %s comments from %s" % (idx,file))
             if time < starttime or time > endtime:
                 continue
             # get rid of punctuation, force everything to lower case and split into a list of words
@@ -84,7 +88,7 @@ def dumpPostgres(date,word_counts):
         word_counts[subreddit] = { k:v for (k,v) in word_counts[subreddit].iteritems() if v != 1}
     
     # dump to a temp csv first
-    print "dumping to temp csv..."
+    print_withtime ("dumping to temp csv...")
     with open('/tmp/reddit/test.csv', 'wb') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['date','subreddit','word','count'])
@@ -93,7 +97,7 @@ def dumpPostgres(date,word_counts):
                 writer.writerow([date,subreddit,word,word_counts[subreddit][word]])
 
     # then copy into postgres (much faster than inserts)
-    print "...and inserting to postgres"
+    print_withtime ("...and inserting to postgres")
     cur.execute('COPY word_counts FROM \'/tmp/reddit/test.csv\' CSV HEADER;')
     db.commit()
 
@@ -105,9 +109,15 @@ startdate = datetime.datetime(2015,01,05)
 seven_days = datetime.timedelta(7)
 
 parseWeek(startdate)
-parseWeek(startdate += seven_days)
-parseWeek(startdate += seven_days)
-parseWeek(startdate += seven_days)
-parseWeek(startdate += seven_days)
-parseWeek(startdate += seven_days)
-parseWeek(startdate += seven_days)
+startdate += seven_days
+parseWeek(startdate)
+startdate += seven_days
+parseWeek(startdate)
+startdate += seven_days
+parseWeek(startdate)
+startdate += seven_days
+parseWeek(startdate)
+startdate += seven_days
+parseWeek(startdate)
+startdate += seven_days
+parseWeek(startdate)
