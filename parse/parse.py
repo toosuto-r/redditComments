@@ -48,7 +48,7 @@ def parseWeek(startdate):
     print_withtime ("parsing the comments for the week starting %s" % (str(startdate)[:10]))
     word_counts = parseComments(file1, word_counts, toUTC(startdate), toUTC(enddate))
     if file1 != file2 and enddate.day != 1:
-        word_counts = parseComments(file1, word_counts, toUTC(startdate), toUTC(enddate))
+        word_counts = parseComments(file2, word_counts, toUTC(startdate), toUTC(enddate))
 
     print_withtime ("writing word counts for the week starting %s to database" % (str(startdate)[:10]))
     dumpPostgres(str(startdate)[:10], word_counts)
