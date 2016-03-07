@@ -12,12 +12,15 @@ library("plyr")
 
 # Read a data set. 
 # Data format: dataframe with 3 variables; variables 1 & 2 correspond to interactions; variable 3 corresponds to the weight of interaction
-dataSet <- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-re.txt",header=FALSE, sep = "\t")
-edgeLabel<- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-edgeLabels.txt",header=FALSE, sep = "\t")
+readIn <- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-TimeLineTrial_gexf.txt",header=FALSE, sep = "\t")
+dataSet <- readIn[,1:3]
+dynamicEdges <- readIn[,4:5]
+# edgeLabel<- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-edgeLabels.txt",header=FALSE, sep = "\t")
 
 
 # Create a graph. Use simplify to ensure that there are no duplicated edges or self loops
 gD <- simplify(graph.data.frame(dataSet, directed=FALSE))
+gD <- graph.data.frame(dataSet, directed=FALSE)
 
 
 # Print number of nodes and edges
@@ -133,6 +136,7 @@ nodes_col_df <- as.data.frame(t(col2rgb(nodes_col, alpha = FALSE)))
 nodes_col_df <- cbind(nodes_col_df, alpha = rep(0.5, times = nrow(nodes_col_df)))
 # Assign visual attributes to nodes (colors have to be 4dimensional - RGBA)
 nodes_att_viz <- list(color = nodes_col_df, position = nodes_coord, size = nodes_size)
+# nodes_att_viz <- list(color = nodes_col_df, size = nodes_size)
 
 # Assign visual attributes to edges using the same approach as we did for nodes
 F2 <- colorRampPalette(c("#FFFF00", "#006400"), bias = length(unique(E(gD)$weight)), space = "rgb", interpolate = "linear")
@@ -146,7 +150,8 @@ edges_col_df <- cbind(edges_col_df, alpha = rep(1, times = nrow(edges_col_df)))
 edges_att_viz <-list(color = edges_col_df)
 
 # Write the network into a gexf (Gephi) file
-write.gexf(nodes = nodes_df, edges = edges_df, edgesLabel=edgeLabel, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, defaultedgetype = "undirected", output = "Rcomm_thresh2.gexf")
+# write.gexf(nodes = nodes_df, edges = edges_df, edgesLabel=edgeLabel, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, defaultedgetype = "undirected", output = "Rcomm_thresh2.gexf")
+write.gexf(nodes = nodes_df, edges = edges_df, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, edgeDynamic = dynamicEdges, defaultedgetype = "undirected", output = "Rcomm_thresh2_dynamic_.gexf")
 # write.gexf(nodes = nodes_df, edges = edges_df, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, edgesVizAtt = edges_att_viz, defaultedgetype = "undirected", output = "Rcomm_thresh2.gexf")
 
 #And without edge weights
