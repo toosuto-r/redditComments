@@ -109,8 +109,7 @@ for(time in seq(ti,total_time,dt)){
   V(g)$size[is.na(V(g)$size)]<-(-Inf)
   gt<-simplify(gt)
   
-  fgreedy<-fastgreedy.community(gt)
-  community$membership
+  community<-fastgreedy.community(gt)
 
   ptm<-proc.time()
   for (q in seq(1,length(unique(community$membership)))){
