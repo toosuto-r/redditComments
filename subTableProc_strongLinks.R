@@ -6,7 +6,7 @@ ptm<-proc.time()
 #read the list of top subreddits, which have been polled for top word lists recorded as text files
 subs<-read.table(file="C:/Users/Ryan/Documents/R/data/rcomments/topSubs300.txt")
 subLim<-nrow(subs)
-
+# subLim<-7
 # read the full word frequency table from file
 readFName<-"C:/Users/Ryan/Documents/R/data/rcomments/fullWords.txt"
 fullWord<-read.table(file=readFName,header=TRUE, sep=",")
@@ -82,7 +82,7 @@ for (p in seq(1,subLim-1)){
     scanPer<-c(scanPer,nullScanPer)
    
     #combine the matching words
-    currFullWords<-c(as.vector.factor(currWords),as.vector.factor(scanWords))
+    currFullWord<-c(as.vector(currWords),as.vector(scanWords))
     
     # calculate the weights, modifying the difference by adding 1 
     # to ensure the resulting product is larger than the starting terms  
@@ -102,10 +102,12 @@ for (p in seq(1,subLim-1)){
     ############################
     
     currUse<-(currPer+scanPer)/2
-    # currFullPer<-fullWords[match(currFullWords,fullWords$word),3]/fullWordnEntry*100
+    currFullPer<-fullWord[match(currFullWord,fullWord$word),3]/fullWordnEntry*100
     # linksStrength<-weights/(((currUse-currFullPer))*(currUse))
-    # linksStrength<-(((currUse-currFullPer)+1)*(currUse))/weights
-    linksStrength<-(((currUse-currFullPer)+1)*1)/weights
+    linksStrength<-((abs(currUse-currFullPer)+1)*(currUse)^1)/weights
+    # linksStrength<-(((currUse-currFullPer)+1)*currUse)/weights
+    # linksStrength<-((currUse-currFullPer)+1)/(abs(currPer-scanPer))^2
+    # linksStrength<-((currUse-currFullPer)+1)*currUse^3/(abs(currPer-scanPer))
     
     #place the currLikeness into [p,q] of the relational table
     # print(currLikeness)
@@ -115,8 +117,8 @@ for (p in seq(1,subLim-1)){
     
     
     minInd<-which.max(abs(linksStrength))
-    minLikeness[count,1]<-currFullWords[minInd]
-
+    minLikeness[count,1]<-currFullWord[minInd]
+    # print(minInd)
   }
   
   

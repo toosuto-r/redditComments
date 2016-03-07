@@ -53,7 +53,7 @@ List of scripts, and description:
     create a larger weight for tighter links.
   
   gexf_subRel.R
-    This script is largely lifted directly from REFERENCE, CREDIT, with a couple of minor tweaks: the subreddit sizes are used for node size,
-    but as log of their actual size; the links are given no colour, to allow colouration by the source node after modularity; and of course a
-    differenct dataset. The script uses Fruchterman-Reingold layout, which can be reasonably well recreated in gephi itself with the same
-    layout, gravity <- 5 and size <- 10000.
+    This script is largely lifted directly from https://gist.github.com/Vessy with a couple of minor tweaks: the subreddit sizes are used for 
+    node size, but as log of their actual size; the links are given no colour, to allow colouration by the source node after modularity; and of 
+    course a differenct dataset. The script uses Fruchterman-Reingold layout, which can be reasonably well recreated in gephi itself with the 
+    same layout, gravity <- 0.5 and size <- 3000.
