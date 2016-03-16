@@ -1,0 +1,257 @@
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+</head>
+<body>
+<script src="sigma.min.js"></script>
+<script src="sigma.parsers.gexf.min.js"></script>
+<script src="sigma.plugins.animate.min.js"></script>
+<script src="testDataJS.js"></script>
+<div id="container">
+  <style>
+    #graph-container {
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+	  width: 1200;
+	  height: 800;
+      position: absolute;
+    }
+  </style>
+  <div id="graph-container"></div>
+</div>
+
+
+
+<script>
+var fileLoc='rComm_thresh_test_time60.gexf';
+var fileLoc2='rComm_thresh_test_time11.gexf';
+var fileLocs=[];
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+function parseGexToGraphObj(fileL){
+	var tmpSig = new sigma();
+	sigma.parsers.gexf(
+	fileL,tmpSig);
+	return tmpSig;
+};
+
+ss = new sigma({
+  graph: gg
+});
+
+aaa=ss.graph.nodes(1).x
+
+
+// define a new placeholder sigma
+noSig = new sigma();
+sigma.parsers.gexf(
+fileLoc,noSig,
+function(){
+noSig.refresh();
+}
+);
+
+//var fff=noSig.graph.nodes()[1].id;
+no2Sig = new sigma();
+sigma.parsers.gexf(
+fileLoc2,no2Sig
+);
+
+var currSig = noSig,
+	newSig = no2Sig,
+	o={},
+	i,
+	g={
+	nodes: [],
+	edges: []
+	},
+	step=0,
+	N=currSig.graph.nodes().length;
+	
+//window.alert(noSig.graph.nodes().length);
+window.alert(N);
+
+</script>
+
+
+
+
+<script>
+
+// Add a method to the graph model that returns an
+  // object with every neighbors of a node inside:
+  sigma.classes.graph.addMethod('neighbors', function(nodeId) {
+    var k,
+        neighbors = {},
+        index = this.allNeighborsIndex[nodeId] || {};
+
+    for (k in index)
+      neighbors[k] = this.nodesIndex[k];
+
+    return neighbors;
+  });
+
+// We gave our own name 'border' to the custom renderer
+sigma.canvas.nodes.border = function(node, context, settings) {
+  var prefix = settings('prefix') || '';
+
+  context.fillStyle = node.color || settings('defaultNodeColor');
+  context.beginPath();
+  context.arc(
+    node[prefix + 'x'],
+    node[prefix + 'y'],
+    node[prefix + 'size'],
+    0,
+    Math.PI * 2,
+    true
+  );
+
+  context.closePath();
+  context.fill();
+
+  // Adding a border
+  context.lineWidth = node.borderWidth || 1;
+  context.strokeStyle = node.borderColor || '#fff';
+  context.stroke();
+};
+
+// Add a
+  
+  
+// try pulling the x and y values from each object in array
+// function getPropFromGex(currSig){
+N=currSig.graph.nodes().length;
+E=currSig.graph.edges().length;
+
+for (i=0; i<N; i++){	
+  o = {
+    id: currSig.graph.nodes()[i].id,
+    label: currSig.graph.nodes()[i].label,
+    first_x: currSig.graph.nodes()[i].x,
+    first_y: currSig.graph.nodes()[i].y,
+    first_size: currSig.graph.nodes()[i].size,
+	color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2])),
+	first_color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2])),
+ 	second_x: newSig.graph.nodes()[i].x,
+    second_y: newSig.graph.nodes()[i].y,
+    second_size: newSig.graph.nodes()[i].size,
+	second_color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2]))
+  };
+  g.nodes.push(o);
+};
+for (i=0; i<E; i++){
+	g.edges.push({
+	id: currSig.graph.edges()[i].id,
+	source: currSig.graph.edges()[i].source,
+	target: currSig.graph.edges()[i].target
+	})
+};
+
+s = new sigma({
+  graph: g,
+   renderer: {
+    container: document.getElementById('graph-container'),
+    type: 'canvas'
+  },
+  settings: {
+	defaultEdgeType:'curve',
+	defaultLabelSize: 14,
+	labelThreshold: 10,
+	maxEdgeSize: 0.8,
+	defaultNodeType: 'border',
+    animationsTime: 1000
+  },
+  function(s) {
+      // We first need to save the original colors of our
+      // nodes and edges, like this:
+      s.graph.nodes().forEach(function(n) {
+        n.originalColor = n.color;
+      });
+      s.graph.edges().forEach(function(e) {
+        e.originalColor = e.color;
+      });
+
+      // When a node is clicked, we check for each node
+      // if it is a neighbor of the clicked one. If not,
+      // we set its color as grey, and else, it takes its
+      // original color.
+      // We do the same for the edges, and we only keep
+      // edges that have both extremities colored.
+      s.bind('clickNode', function(e) {
+        var nodeId = e.data.node.id,
+            toKeep = s.graph.neighbors(nodeId);
+        toKeep[nodeId] = e.data.node;
+
+        s.graph.nodes().forEach(function(n) {
+          if (toKeep[n.id])
+            n.color = n.originalColor;
+          else
+            n.color = '#eee';
+        });
+
+        s.graph.edges().forEach(function(e) {
+          if (toKeep[e.source] && toKeep[e.target])
+            e.color = e.originalColor;
+          else
+            e.color = '#eee';
+        });
+
+        // Since the data has been modified, we need to
+        // call the refresh method to make the colors
+        // update effective.
+        s.refresh();
+      });
+
+      // When the stage is clicked, we just color each
+      // node and edge with its original color.
+      s.bind('clickStage', function(e) {
+        s.graph.nodes().forEach(function(n) {
+          n.color = n.originalColor;
+        });
+
+        s.graph.edges().forEach(function(e) {
+          e.color = e.originalColor;
+        });
+
+        // Same as in the previous event:
+        s.refresh();
+      });
+    }
+});
+
+setInterval(function() {
+  var prefix = ['first_', 'second_'][step = +!step];
+  sigma.plugins.animate(
+    s,
+    {
+      //x: prefix + 'x',
+      //y: prefix + 'y',
+      //size: prefix + 'size',
+      //color: prefix + 'color'
+	  x: prefix + 'x',
+      y: prefix + 'y',
+      size: prefix + 'size',
+      color: prefix + 'color'
+    },
+    {
+      duration: 2000
+    }
+  );
+}, 3000);
+
+</script>
+
+</body>
+</html>
