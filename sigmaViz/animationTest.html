@@ -2,36 +2,43 @@
 <html>
 <head>
 <meta charset="UTF-8">
-
+<style type="text/css">
+  #graph-container {
+    max-width: 600px;
+    height: 600px;
+    margin: auto;
+  }
+</style>
 </head>
 <body>
+
+<div id="graph-container"></div>
 <script src="sigma.min.js"></script>
 <script src="sigma.parsers.gexf.min.js"></script>
 <script src="sigma.plugins.animate.min.js"></script>
-<script src="testDataJS.js"></script>
-<div id="container">
-  <style>
-    #graph-container {
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-	  width: 1200;
-	  height: 800;
-      position: absolute;
-    }
-  </style>
-  <div id="graph-container"></div>
-</div>
-
-
+<script src="sizeof.compressed.js"></script>
 
 <script>
-var fileLoc='rComm_thresh_test_time60.gexf';
-var fileLoc2='rComm_thresh_test_time11.gexf';
 var fileLocs=[];
+var noFiles=70
 
-function componentToHex(c) {
+var i,
+	g={
+	nodes: [],
+	edges: []
+	},
+	h={
+	nodes: [],
+	edges: []
+	}
+
+//build up the files list
+for( i=10; i<=noFiles; i++){
+	fileLocs[i-10]='rComm_thresh_test_time'+i+'.gexf';
+};
+
+//define component converters for tricky non-hex colours
+function componentToHex(c) {	
     var hex = c.toString(16);
     return hex.length == 1 ? "0" + hex : hex;
 }
@@ -40,69 +47,7 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-function parseGexToGraphObj(fileL){
-	var tmpSig = new sigma();
-	sigma.parsers.gexf(
-	fileL,tmpSig);
-	return tmpSig;
-};
-
-ss = new sigma({
-  graph: gg
-});
-
-aaa=ss.graph.nodes(1).x
-
-
-// define a new placeholder sigma
-noSig = new sigma();
-sigma.parsers.gexf(
-fileLoc,noSig,
-function(){
-noSig.refresh();
-}
-);
-
-//var fff=noSig.graph.nodes()[1].id;
-no2Sig = new sigma();
-sigma.parsers.gexf(
-fileLoc2,no2Sig
-);
-
-var currSig = noSig,
-	newSig = no2Sig,
-	o={},
-	i,
-	g={
-	nodes: [],
-	edges: []
-	},
-	step=0,
-	N=currSig.graph.nodes().length;
-	
-//window.alert(noSig.graph.nodes().length);
-window.alert(N);
-
-</script>
-
-
-
-
-<script>
-
-// Add a method to the graph model that returns an
-  // object with every neighbors of a node inside:
-  sigma.classes.graph.addMethod('neighbors', function(nodeId) {
-    var k,
-        neighbors = {},
-        index = this.allNeighborsIndex[nodeId] || {};
-
-    for (k in index)
-      neighbors[k] = this.nodesIndex[k];
-
-    return neighbors;
-  });
-
+//define border renderer - credit ??
 // We gave our own name 'border' to the custom renderer
 sigma.canvas.nodes.border = function(node, context, settings) {
   var prefix = settings('prefix') || '';
@@ -127,131 +72,164 @@ sigma.canvas.nodes.border = function(node, context, settings) {
   context.stroke();
 };
 
-// Add a
-  
-  
-// try pulling the x and y values from each object in array
-// function getPropFromGex(currSig){
-N=currSig.graph.nodes().length;
-E=currSig.graph.edges().length;
 
-for (i=0; i<N; i++){	
-  o = {
-    id: currSig.graph.nodes()[i].id,
-    label: currSig.graph.nodes()[i].label,
-    first_x: currSig.graph.nodes()[i].x,
-    first_y: currSig.graph.nodes()[i].y,
-    first_size: currSig.graph.nodes()[i].size,
-	color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2])),
-	first_color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2])),
- 	second_x: newSig.graph.nodes()[i].x,
-    second_y: newSig.graph.nodes()[i].y,
-    second_size: newSig.graph.nodes()[i].size,
-	second_color: rgbToHex(parseInt(currSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[1]),parseInt(currSig.graph.nodes()[i].color.split(",")[2]))
-  };
-  g.nodes.push(o);
-};
-for (i=0; i<E; i++){
-	g.edges.push({
-	id: currSig.graph.edges()[i].id,
-	source: currSig.graph.edges()[i].source,
-	target: currSig.graph.edges()[i].target
-	})
-};
+// define a set of new placeholder sigmas
+noSig = new sigma();
+newSig= new sigma(); 
+s=new sigma();
 
-s = new sigma({
-  graph: g,
-   renderer: {
-    container: document.getElementById('graph-container'),
-    type: 'canvas'
-  },
-  settings: {
-	defaultEdgeType:'curve',
-	defaultLabelSize: 14,
-	labelThreshold: 10,
-	maxEdgeSize: 0.8,
-	defaultNodeType: 'border',
-    animationsTime: 1000
-  },
-  function(s) {
-      // We first need to save the original colors of our
-      // nodes and edges, like this:
-      s.graph.nodes().forEach(function(n) {
-        n.originalColor = n.color;
-      });
-      s.graph.edges().forEach(function(e) {
-        e.originalColor = e.color;
-      });
+//and a place to hold camera information
+var camOut;
 
-      // When a node is clicked, we check for each node
-      // if it is a neighbor of the clicked one. If not,
-      // we set its color as grey, and else, it takes its
-      // original color.
-      // We do the same for the edges, and we only keep
-      // edges that have both extremities colored.
-      s.bind('clickNode', function(e) {
-        var nodeId = e.data.node.id,
-            toKeep = s.graph.neighbors(nodeId);
-        toKeep[nodeId] = e.data.node;
 
-        s.graph.nodes().forEach(function(n) {
-          if (toKeep[n.id])
-            n.color = n.originalColor;
-          else
-            n.color = '#eee';
-        });
+//main function which takes two files and animates between them - note always takes the NEXT set of edges - the result at the end of the animation is the real result!
+function runTwoGex(fileA,fileB){
 
-        s.graph.edges().forEach(function(e) {
-          if (toKeep[e.source] && toKeep[e.target])
-            e.color = e.originalColor;
-          else
-            e.color = '#eee';
-        });
+//kill and clear previous iteration remnants (note killing s is problematic - clear only)
+noSig.graph.kill();
+noSig = new sigma();
+newSig.graph.kill();
+newSig= new sigma();
+s.graph.clear();
+h={
+	nodes:[],
+	edges:[]
+}
 
-        // Since the data has been modified, we need to
-        // call the refresh method to make the colors
-        // update effective.
-        s.refresh();
-      });
 
-      // When the stage is clicked, we just color each
-      // node and edge with its original color.
-      s.bind('clickStage', function(e) {
-        s.graph.nodes().forEach(function(n) {
-          n.color = n.originalColor;
-        });
-
-        s.graph.edges().forEach(function(e) {
-          e.color = e.originalColor;
-        });
-
-        // Same as in the previous event:
-        s.refresh();
-      });
-    }
-});
-
-setInterval(function() {
-  var prefix = ['first_', 'second_'][step = +!step];
-  sigma.plugins.animate(
-    s,
-    {
-      //x: prefix + 'x',
-      //y: prefix + 'y',
-      //size: prefix + 'size',
-      //color: prefix + 'color'
-	  x: prefix + 'x',
-      y: prefix + 'y',
-      size: prefix + 'size',
-      color: prefix + 'color'
-    },
-    {
-      duration: 2000
-    }
-  );
-}, 3000);
+//parse the first gexf, and pass it to noSig. once done, initiate parse on second file
+sigma.parsers.gexf(
+	fileA,noSig,
+	function(){
+		sigma.parsers.gexf(
+		fileB,newSig,
+		function(){
+			// pull values from both graphs into one double set of nodes for animation
+			for (i=0; i<noSig.graph.nodes().length; i++){	
+			  o = {
+				id: noSig.graph.nodes()[i].id,
+				label: noSig.graph.nodes()[i].label,
+				x: noSig.graph.nodes()[i].x,
+				y: noSig.graph.nodes()[i].y,
+				size: noSig.graph.nodes()[i].size,
+				color: rgbToHex(parseInt(noSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(noSig.graph.nodes()[i].color.split(",")[1]),parseInt(noSig.graph.nodes()[i].color.split(",")[2])),
+				second_x: newSig.graph.nodes()[i].x,
+				second_y: newSig.graph.nodes()[i].y,
+				second_size: newSig.graph.nodes()[i].size,
+				second_color: rgbToHex(parseInt(newSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(newSig.graph.nodes()[i].color.split(",")[1]),parseInt(newSig.graph.nodes()[i].color.split(",")[2]))
+			  };
+			  h.nodes.push(o);
+			};
+			// pull the END edges in - no animation, just jump to the next set so the animation ends correctly
+			for (i=0; i<newSig.graph.edges().length; i++){
+				h.edges.push({
+				id: newSig.graph.edges()[i].id,
+				source: newSig.graph.edges()[i].source,
+				target: newSig.graph.edges()[i].target
+				})
+			};
+			
+			s.refresh()
+			
+			//if there is no camera present, run the first s instance and make one. s is populated from previously noted nodes and edges now in h.
+			if (typeof camOut != "undefined"){
+			s = new sigma({
+				graph: h,
+				renderer: {
+					camera: 'cam1',
+					container: document.getElementById('graph-container'),
+					type: 'canvas'
+				},
+				settings: {
+					defaultEdgeType:'curve',
+					defaultLabelSize: 14,
+					labelThreshold: 10,
+					maxEdgeSize: 0.8,
+					defaultNodeType: 'border',
+					animationsTime: 1000,
+					drawEdges: true
+				}
+			});
+			
+			// move the camera to the spot it was in before re-doing s
+			s.cameras.cam1.goTo({
+				x:camOut.x,
+				y:camOut.y,
+				ratio:camOut.ratio				
+				})
+			
+			}
+			else{
+			s = new sigma({
+				graph: h,
+				renderer: {
+					container: document.getElementById('graph-container'),
+					type: 'canvas'
+				},
+				settings: {
+					defaultEdgeType:'curve',
+					defaultLabelSize: 14,
+					labelThreshold: 10,
+					maxEdgeSize: 0.8,
+					defaultNodeType: 'border',
+					animationsTime: 1000
+				}	
+			});
+			
+			s.addCamera('cam1');
+			
+			}
+			
+				
+			// clear h ASAP
+			h={
+				nodes:[],
+				edges:[]
+			}		
+			
+			// ready to jump to the second set, then do it, then refresh when finished and output current camera view, and attempt to clean up again
+			var prefix = 'second_';
+			sigma.plugins.animate(
+					s,
+					{
+						x: prefix + 'x',
+						y: prefix + 'y',
+						size: prefix + 'size',
+						color: prefix + 'color'
+					},
+					{
+						duration: 2000,
+						onComplete: function(){
+						s.refresh();
+						camOut=s.cameras.cam1;
+						s.graph.clear();
+						noSig.graph.clear();
+						newSig.graph.clear();
+						
+					}
+					}
+					
+				);
+		});
+	
+	}
+);
+}
+	
+var lup=10,
+	f1,
+	f2;
+// call the interval function until all the desired files have run
+var intervalId = setInterval(function(){
+	f1 = 'rComm_thresh_test_time'+lup+'.gexf';
+	f2 = 'rComm_thresh_test_time'+(lup+1)+'.gexf';
+	runTwoGex(f1,f2);
+	lup++;
+	if(lup >= noFiles-25){
+          clearInterval(intervalId);
+     }
+},4000)
 
 </script>
-
 </body>
 </html>
