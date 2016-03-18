@@ -1,4 +1,5 @@
-relResults<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re3.txt", header=TRUE, sep=",")
+# relResults<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/subRelation-re3.txt", header=TRUE, sep=",")
+relResults<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote.txt", header=TRUE, sep=",")
 edgeLabels<-read.table("C:/Users/Ryan/Documents/R/data/rcomments/minConnection3.txt",header=TRUE, sep=",")
 
 matRes<-as.matrix(relResults)
@@ -45,7 +46,7 @@ for (p in seq(1,subLim-1)){
 
 
 
-fName<-"~/R/data/rcomments/subRelationPreGexf_avThresh-re.txt"
+fName<-"~/R/data/rcomments/subRelationPreGexf_avThresh-re_remote.txt"
 write.table(geOut,fName,quote=FALSE,sep="\t",col.names=FALSE, row.names=FALSE)
 
 fName2<-"~/R/data/rcomments/subRelationPreGexf_avThresh-edgeLabels.txt"

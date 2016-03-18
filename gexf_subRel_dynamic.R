@@ -151,7 +151,7 @@ edges_att_viz <-list(color = edges_col_df)
 
 # Write the network into a gexf (Gephi) file
 # write.gexf(nodes = nodes_df, edges = edges_df, edgesLabel=edgeLabel, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, defaultedgetype = "undirected", output = "Rcomm_thresh2.gexf")
-write.gexf(nodes = nodes_df, edges = edges_df, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, edgeDynamic = dynamicEdges, defaultedgetype = "undirected", output = "Rcomm_thresh2_dynamic_.gexf")
+##########write.gexf(nodes = nodes_df, edges = edges_df, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, edgeDynamic = dynamicEdges, defaultedgetype = "undirected", output = "Rcomm_thresh2_dynamic_.gexf")
 # write.gexf(nodes = nodes_df, edges = edges_df, nodesAtt = nodes_att, edgesWeight = E(gD)$weight, edgesAtt = edges_att, nodesVizAtt = nodes_att_viz, edgesVizAtt = edges_att_viz, defaultedgetype = "undirected", output = "Rcomm_thresh2.gexf")
 
 #And without edge weights

@@ -12,7 +12,7 @@ library("plyr")
 
 # Read a data set. 
 # Data format: dataframe with 3 variables; variables 1 & 2 correspond to interactions; variable 3 corresponds to the weight of interaction
-dataSet <- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-re.txt",header=FALSE, sep = "\t")
+dataSet <- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-re_remote.txt",header=FALSE, sep = "\t")
 edgeLabel<- read.table("~/R/data/rcomments/subRelationPreGexf_avThresh-edgeLabels.txt",header=FALSE, sep = "\t")
 
 
@@ -111,8 +111,9 @@ totalComm<-sum(subSizes[,2])
 
 
 for (p in seq(1,dim(nodes_df)[1])){
-  nodes_size[p]<-log(((subSizes[nodes_df[p,2]==as.vector(subSizes[,1]),2])/totalComm)*10000)/50
+#   nodes_size[p]<-log(((subSizes[nodes_df[p,2]==as.vector(subSizes[,1]),2])/totalComm)*10000)/50
   print(p)
+  nodes_size[p]<-1
 }
 
 

@@ -55,20 +55,20 @@ for (p in seq(1,subLim-1)){
     #get total number of word entries for the scan sub
     nEntries<-sum(scanRed$nentry)
     
-<<<<<<< HEAD
+
     #set likeness score counter for this pair to zero
     currLikeness=0
     
     #loop through each word in the current subreddit and compare it to the words in the next sub
-=======
+
     # find where the current words are in the scan sub
->>>>>>> rComm-drill
+
     wordInd<-match(currRed$word,scanRed$word)
     
     # find the position of scan words in the current sub list
     scanWordInd<-match(scanRed$word,currRed$word)
     
-<<<<<<< HEAD
+
     
     ## this is discarding NAs at the start - possibly faster but very very little
     
@@ -89,12 +89,12 @@ for (p in seq(1,subLim-1)){
     ######### JUST SET THE CURRPER AS ALL OF ITS PERS, THEN THE SCANPER IS 
     # THE RE-ORDERED PERCENTAGES TO MATCH, WITH ZEROES WHERE THERE IS NO MATCH
     # AND TACK THE MISSING SCANRED WORDS ON THE END WITH MATCHING ZEROES IN THE CURRRED
-=======
+
     # get the current percentage use of words in the main sub, and the 
     # percentage use of unmatched words in the scan sub (i.e. 0% use) 
     # using the matched indices for scanRed orders the table so each
     # row of currPer and scanPer address the same word, indexed by currPer
->>>>>>> rComm-drill
+
     currPer<-currRed[,3]/nMainEntries*100
     scanPer<-scanRed[wordInd,3]/nEntries*100
     scanPer[is.na(scanPer)] <- 0
@@ -125,7 +125,7 @@ for (p in seq(1,subLim-1)){
     # different from the main reddit corpus (mainDifference). The mainDifference should be the
     # over- or under-representation of the word in the main corpus.
     # The metric is subsDifference/mainDifference
-    # weight*currUse/mainCorpusUse?
+    # weight*currUse/mainCorpusUse? 
     # weight/((currUse-mainCorpusUse)*currUse) - big when it's close to main use, small when far away
     #                                   and also smaller for higher-use words (currUse<- (currPer+scanPer)/2)
     
@@ -144,18 +144,15 @@ for (p in seq(1,subLim-1)){
     links[p,q]<-currLikeness
     # cat(p,q)
     count<-count+1
-    
-<<<<<<< HEAD
+
     currPer<-0
     scanPer<-0
     weights<-0
-    
-=======
-    
+
     minInd<-which.max(abs(linksStrength))
     minLikeness[count,1]<-currFullWord[minInd]
     # print(minInd)
->>>>>>> rComm-drill
+
   }
   
   

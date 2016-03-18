@@ -1,0 +1,155 @@
+library(RPostgreSQL)
+setwd("~/R/data")
+
+
+
+#set a placeholder frame for the weight data later
+timeLinkTmp<-data.frame(id1=double(),id2=double(),weight=double(),time=double())
+
+dateSet<-1
+##connect to db and return test results
+ptm<-proc.time()
+#get pass
+pw<-getPass()
+
+#get the list of subreddits and their words
+fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates.txt"
+topSubTable<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
+
+
+fName<-"C:/Users/Ryan/Documents/R/data/rcomments/englishStop.txt"
+stopWords<-read.table(fName,sep=",",header = FALSE)
+
+lim<-nrow(topSubTable)
+wordLim<-3000
+
+#connect to main comment database
+drv<-dbDriver("PostgreSQL")
+con<- dbConnect(drv,host="remote.picodoc.org",port=12360,dbname="reddit",user="reddit",password=pw)
+
+
+#define the query to return the pop. table (a list of all subs)
+preSubs<-paste(topSubTable[,dateSet],collapse="','")
+subList<-paste("'",preSubs,"'",sep="")
+
+# send one large query to get the full
+currQuery<-paste("SELECT * FROM word_counts WHERE subreddit IN (", subList, ") AND date='",names(topSubTable)[1],"' ORDER BY subreddit, count DESC;",sep="")
+result<- dbSendQuery(con, statement = currQuery)
+dataOut <- fetch(result, -1)
+dbClearResult(dbListResults(con)[[1]])
+
+#remove stop words (including "deleted" etc.)
+dataOut<-dataOut[-which(dataOut$word %in% stopWords[,1]),]
+
+#write the pop. table for the current sub
+fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/fullSubTableStop.txt",sep="")
+write.table(dataOut,fName,sep=",")
+
+dataOut<-read.table(fName,sep=",",header=TRUE)
+
+dbDisconnect(con)
+
+pw<-"disregard this"
+cat("time elapsed for main DB call (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s",sep="")
+
+
+ptm<-proc.time()
+
+# set the initial subreddit (most populous) table with starting word list
+# and associated counts
+currSub<-dataOut[which(dataOut$subreddit %in% topSubTable[1,dateSet]),c("word","count")][1:wordLim,]
+
+# run through all subs and merge into the current ever-larger word freq table
+# i.e. full outer join
+for (p in seq(2,lim)){
+  tmpSub<-currSub
+  newSub<-dataOut[which(dataOut$subreddit %in% topSubTable[p,dateSet]),c("word","count")][1:wordLim,]
+  currSub<-merge(tmpSub,newSub,by="word",all=TRUE)
+}
+names(currSub)<-c("wordList",as.vector(topSubTable[,dateSet]))
+freqTable<-currSub[order(currSub[,2], decreasing=TRUE),]
+# currSub<-currSub[order(currSub[,c(as.vector(topSubTable$'2015-02-16'))], decreasing=TRUE),]
+freqTable[is.na(freqTable)]<-0
+
+# run a loop and for each pairing calculate the difference in word use percentages 
+# and multiply by the sum of word use between them to favour high-ranking words
+# note zero in both does not contribute to the weight sum
+ptm<-proc.time()
+
+subRelTable<-as.data.frame(matrix(nrow=lim,ncol=lim))
+for(s in seq(1,lim-1)){
+  currPer<-freqTable[,s+1]/sum(freqTable[,s+1])*100
+  for(t in seq(s+1,lim)){
+    scanPer<-freqTable[,t+1]/sum(freqTable[,t+1])*100
+    weight<-sum((abs(currPer-scanPer)+1)*(currPer+scanPer))
+    subRelTable[s,t]<-weight
+  }
+}
+
+# add the row and column names from the current date
+names(subRelTable)<-as.vector(topSubTable[,dateSet])
+row.names(subRelTable)<-as.vector(topSubTable[,dateSet])
+
+
+print(proc.time()-ptm)
+
+fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_",names(topSubTable)[dateSet],".txt",sep="")
+write.table(subRelTable,fName,sep=",")
+
+
+cat("time elapsed subRelTable formation (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s",sep="")
+
+######################
+######################
+
+# return a thresholded set of edges with associated IDs and times
+
+matRes<-as.matrix(subRelTable)
+matRes<-log(matRes)
+
+#set the threshold at some reasonable appropriate value
+# thresh<-as.double(quantile(matRes, na.rm=TRUE)[2]*0.5)
+thresh<-as.double(quantile(matRes, 0.05, na.rm=TRUE))
+
+
+#two way table taken in - select the row name and all non-NA
+#column names, and put the weight as the relation
+geOut<-data.frame(id1=double(),id2=double(),weight=double())
+
+count<-0
+discard<-0
+fullCount<-0
+
+subNames<-row.names(subRelTable)
+subLim<-length(subNames)
+
+for (p in seq(1,subLim-1)){
+  
+  for (q in seq(p+1,subLim)){
+    
+    if (matRes[p,q]<=thresh){
+      
+      count<-count+1
+      fullCount<-fullCount+1
+      
+      geOut[count,1]<-subNames[p]
+      geOut[count,2]<-subNames[q]
+      # use percentage of match - lower is better
+      geOut[count,3]<-(1-matRes[p,q]/thresh)*100
+    } else {
+      count<-count
+      discard<-discard+1
+    }
+  }
+}
+
+# add the time (in this case the date index) column to the edge list
+thisTime<-as.data.frame(rep(dateSet,dim(geOut)[1]))
+names(thisTime)<-"time"
+geTime<-cbind(geOut,thisTime)
+
+# then vertically cat to get a time-dynamic list
+timeLinkTmp<-rbind(timeLinkTmp,geTime)
+
+fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_",names(topSubTable)[dateSet],"_thresh.txt",sep="")
+write.table(timeLinkTmp,fName,sep=",")
