@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <style type="text/css">
   #graph-container {
-    max-width: 600px;
-    height: 600px;
+    max-width: 800px;
+    height: 800px;
     margin: auto;
   }
 </style>
@@ -19,23 +19,17 @@
 <script src="sizeof.compressed.js"></script>
 
 <script>
-var fileLocs=[];
-var noFiles=70
-
 var i,
-	g={
-	nodes: [],
-	edges: []
-	},
+	killa=0,
 	h={
 	nodes: [],
 	edges: []
-	}
+	},
+	killInd,
+	killSwitch=0,
+	step=0;
+	
 
-//build up the files list
-for( i=10; i<=noFiles; i++){
-	fileLocs[i-10]='rComm_thresh_test_time'+i+'.gexf';
-};
 
 //define component converters for tricky non-hex colours
 function componentToHex(c) {	
@@ -74,22 +68,26 @@ sigma.canvas.nodes.border = function(node, context, settings) {
 
 
 // define a set of new placeholder sigmas
-noSig = new sigma();
-newSig= new sigma(); 
 s=new sigma();
 
 //and a place to hold camera information
 var camOut;
 
-
+noSig = new sigma();
+newSig= new sigma();
 //main function which takes two files and animates between them - note always takes the NEXT set of edges - the result at the end of the animation is the real result!
 function runTwoGex(fileA,fileB){
+//noSig = new sigma();
+//newSig= new sigma(); 
 
 	//kill and clear previous iteration remnants (note killing s is problematic - clear only)
-	noSig.graph.kill();
-	noSig = new sigma();
-	newSig.graph.kill();
-	newSig= new sigma();
+	if (typeof noSig != "undefined"){
+		//noSig.graph.kill();
+		//newSig.graph.kill();
+		killa=killa+1;
+	}
+	
+
 	s.graph.clear();
 	h={
 		nodes:[],
@@ -142,7 +140,7 @@ function runTwoGex(fileA,fileB){
 					settings: {
 						defaultEdgeType:'curve',
 						defaultLabelSize: 14,
-						labelThreshold: 10,
+						labelThreshold: 8,
 						maxEdgeSize: 0.8,
 						defaultNodeType: 'border',
 						animationsTime: 1000,
@@ -150,12 +148,13 @@ function runTwoGex(fileA,fileB){
 					}
 				});
 				
-				// move the camera to the spot it was in before re-doing s
+				
+				// move the camera to the spot it was in the previous sig inst
 				s.cameras.cam1.goTo({
 					x:camOut.x,
 					y:camOut.y,
 					ratio:camOut.ratio				
-					})
+				})
 				
 				}
 				else{
@@ -168,13 +167,15 @@ function runTwoGex(fileA,fileB){
 					settings: {
 						defaultEdgeType:'curve',
 						defaultLabelSize: 14,
-						labelThreshold: 10,
+						labelThreshold: 8,
 						maxEdgeSize: 0.8,
 						defaultNodeType: 'border',
-						animationsTime: 1000
+						animationsTime: 1000,
+						drawEdges: true
 					}	
 				});
 				
+				// add a camera, since one does not exist in this condition
 				s.addCamera('cam1');
 				
 				}
@@ -197,13 +198,26 @@ function runTwoGex(fileA,fileB){
 						color: prefix + 'color'
 					},
 					{
-						duration: 2000,
+						duration: 1000,
 						onComplete: function(){
-							s.refresh();
+							/*
+							Sig insts 0,1,2 are generated from noSig and newSig
+							so 3 is generated, and kill ID is 4, then 4 is generated and
+							3 must be killed, then 3 is refilled, 4 must be killed etc
+							
+							trying to kill non-extant insts gives an error, so killswitch
+							ensures the first run has no kill.
+							*/
+							killInd = [3, 4][step = +!step];
+						
+							if (killSwitch>0){
+								sigma.instances(killInd).kill();
+							} else {
+							killSwitch++
+							}
+							
+							// store the current camera values
 							camOut=s.cameras.cam1;
-							s.graph.clear();
-							noSig.graph.clear();
-							newSig.graph.clear();
 						}
 					}
 						
@@ -215,18 +229,22 @@ function runTwoGex(fileA,fileB){
 }
 	
 var lup=10,
+	lupStep=2.5,
+	endLup=70,
+	filePrefix='rComm_thresh_test_actualTime_sml14_',
 	f1,
 	f2;
 // call the interval function until all the desired files have run
 var intervalId = setInterval(function(){
-	f1 = 'rComm_thresh_test_time'+lup+'.gexf';
-	f2 = 'rComm_thresh_test_time'+(lup+1)+'.gexf';
+	f1 = filePrefix+lup+'.gexf';
+	f2 = filePrefix+(lup+lupStep)+'.gexf';
 	runTwoGex(f1,f2);
-	lup++;
-	if(lup >= noFiles-25){
+	lup=lup+lupStep;
+
+	if(lup >= endLup-lupStep){
           clearInterval(intervalId);
      }
-},4000)
+},2000)
 
 </script>
 </body>
