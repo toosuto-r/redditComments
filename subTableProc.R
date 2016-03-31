@@ -67,7 +67,11 @@ for (p in seq(1,subLim-1)){
     scanPer<-scanRed[(wordInd),3]/nEntries*100
     nullCurrPer<-currRed[is.na(wordInd),3]/nMainEntries*100
     nullScanPer<-scanRed[is.na(scanWordInd),3]/nEntries*100
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> rComm-drill
     # calculate the weights, modifying the difference by adding 1 
     # to ensure the resulting product is larger than the starting terms  
     weights<-(abs(currPer-scanPer)+1)*(currPer+scanPer)

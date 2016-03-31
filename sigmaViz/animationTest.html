@@ -1,0 +1,251 @@
+
+<html>
+<head>
+<meta charset="UTF-8">
+<style type="text/css">
+  #graph-container {
+    max-width: 800px;
+    height: 800px;
+    margin: auto;
+  }
+</style>
+</head>
+<body>
+
+<div id="graph-container"></div>
+<script src="sigma.min.js"></script>
+<script src="sigma.parsers.gexf.min.js"></script>
+<script src="sigma.plugins.animate.min.js"></script>
+<script src="sizeof.compressed.js"></script>
+
+<script>
+var i,
+	killa=0,
+	h={
+	nodes: [],
+	edges: []
+	},
+	killInd,
+	killSwitch=0,
+	step=0;
+	
+
+
+//define component converters for tricky non-hex colours
+function componentToHex(c) {	
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+//define border renderer - credit ??
+// We gave our own name 'border' to the custom renderer
+sigma.canvas.nodes.border = function(node, context, settings) {
+  var prefix = settings('prefix') || '';
+
+  context.fillStyle = node.color || settings('defaultNodeColor');
+  context.beginPath();
+  context.arc(
+    node[prefix + 'x'],
+    node[prefix + 'y'],
+    node[prefix + 'size'],
+    0,
+    Math.PI * 2,
+    true
+  );
+
+  context.closePath();
+  context.fill();
+
+  // Adding a border
+  context.lineWidth = node.borderWidth || 1;
+  context.strokeStyle = node.borderColor || '#fff';
+  context.stroke();
+};
+
+
+// define a set of new placeholder sigmas
+s=new sigma();
+
+//and a place to hold camera information
+var camOut;
+
+noSig = new sigma();
+newSig= new sigma();
+//main function which takes two files and animates between them - note always takes the NEXT set of edges - the result at the end of the animation is the real result!
+function runTwoGex(fileA,fileB){
+//noSig = new sigma();
+//newSig= new sigma(); 
+
+	//kill and clear previous iteration remnants (note killing s is problematic - clear only)
+	if (typeof noSig != "undefined"){
+		//noSig.graph.kill();
+		//newSig.graph.kill();
+		killa=killa+1;
+	}
+	
+
+	s.graph.clear();
+	h={
+		nodes:[],
+		edges:[]
+	}
+
+	//parse the first gexf, and pass it to noSig. once done, initiate parse on second file
+	sigma.parsers.gexf(
+		fileA,noSig,
+		function(){
+			sigma.parsers.gexf(
+			fileB,newSig,
+			function(){
+				// pull values from both graphs into one double set of nodes for animation
+				for (i=0; i<noSig.graph.nodes().length; i++){	
+				  o = {
+					id: noSig.graph.nodes()[i].id,
+					label: noSig.graph.nodes()[i].label,
+					x: noSig.graph.nodes()[i].x,
+					y: noSig.graph.nodes()[i].y,
+					size: noSig.graph.nodes()[i].size,
+					color: rgbToHex(parseInt(noSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(noSig.graph.nodes()[i].color.split(",")[1]),parseInt(noSig.graph.nodes()[i].color.split(",")[2])),
+					second_x: newSig.graph.nodes()[i].x,
+					second_y: newSig.graph.nodes()[i].y,
+					second_size: newSig.graph.nodes()[i].size,
+					second_color: rgbToHex(parseInt(newSig.graph.nodes()[i].color.split(",")[0].split("(")[1]),parseInt(newSig.graph.nodes()[i].color.split(",")[1]),parseInt(newSig.graph.nodes()[i].color.split(",")[2]))
+				  };
+				  h.nodes.push(o);
+				};
+				// pull the END edges in - no animation, just jump to the next set so the animation ends correctly
+				for (i=0; i<newSig.graph.edges().length; i++){
+					h.edges.push({
+					id: newSig.graph.edges()[i].id,
+					source: newSig.graph.edges()[i].source,
+					target: newSig.graph.edges()[i].target
+					})
+				};
+				
+				s.refresh()
+				
+				//if there is no camera present, run the first s instance and make one. s is populated from previously noted nodes and edges now in h.
+				if (typeof camOut != "undefined"){
+				s = new sigma({
+					graph: h,
+					renderer: {
+						camera: 'cam1',
+						container: document.getElementById('graph-container'),
+						type: 'canvas'
+					},
+					settings: {
+						defaultEdgeType:'curve',
+						defaultLabelSize: 14,
+						labelThreshold: 8,
+						maxEdgeSize: 0.8,
+						defaultNodeType: 'border',
+						animationsTime: 1000,
+						drawEdges: true
+					}
+				});
+				
+				
+				// move the camera to the spot it was in the previous sig inst
+				s.cameras.cam1.goTo({
+					x:camOut.x,
+					y:camOut.y,
+					ratio:camOut.ratio				
+				})
+				
+				}
+				else{
+				s = new sigma({
+					graph: h,
+					renderer: {
+						container: document.getElementById('graph-container'),
+						type: 'canvas'
+					},
+					settings: {
+						defaultEdgeType:'curve',
+						defaultLabelSize: 14,
+						labelThreshold: 8,
+						maxEdgeSize: 0.8,
+						defaultNodeType: 'border',
+						animationsTime: 1000,
+						drawEdges: true
+					}	
+				});
+				
+				// add a camera, since one does not exist in this condition
+				s.addCamera('cam1');
+				
+				}
+				
+					
+				// clear h ASAP
+				h={
+					nodes:[],
+					edges:[]
+				}		
+				
+				// ready to jump to the second set, then do it, then refresh when finished and output current camera view, and attempt to clean up again
+				var prefix = 'second_';
+				sigma.plugins.animate(
+					s,
+					{
+						x: prefix + 'x',
+						y: prefix + 'y',
+						size: prefix + 'size',
+						color: prefix + 'color'
+					},
+					{
+						duration: 1000,
+						onComplete: function(){
+							/*
+							Sig insts 0,1,2 are generated from noSig and newSig
+							so 3 is generated, and kill ID is 4, then 4 is generated and
+							3 must be killed, then 3 is refilled, 4 must be killed etc
+							
+							trying to kill non-extant insts gives an error, so killswitch
+							ensures the first run has no kill.
+							*/
+							killInd = [3, 4][step = +!step];
+						
+							if (killSwitch>0){
+								sigma.instances(killInd).kill();
+							} else {
+							killSwitch++
+							}
+							
+							// store the current camera values
+							camOut=s.cameras.cam1;
+						}
+					}
+						
+				);
+			});
+		
+		}
+	);
+}
+	
+var lup=10,
+	lupStep=2.5,
+	endLup=70,
+	filePrefix='rComm_thresh_test_actualTime_sml14_',
+	f1,
+	f2;
+// call the interval function until all the desired files have run
+var intervalId = setInterval(function(){
+	f1 = filePrefix+lup+'.gexf';
+	f2 = filePrefix+(lup+lupStep)+'.gexf';
+	runTwoGex(f1,f2);
+	lup=lup+lupStep;
+
+	if(lup >= endLup-lupStep){
+          clearInterval(intervalId);
+     }
+},2000)
+
+</script>
+</body>
+</html>
