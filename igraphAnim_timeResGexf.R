@@ -7,7 +7,7 @@ library("colorspace")
 
 #load the edges with time stamp
 #there are three columns in edges: id1,id2,time
-edges <- read.table("~/R/data/rcomments/subRelTable_remote_2015-01-05_thresh.txt",header=T)
+edges <- read.table("~/R/data/rcomments/subRelTable_remote_recent_2016-01-11_thresh.txt",header=T,sep=",")
 
 #generate the full graph
 g <- graph.data.frame(edges,directed=F)
@@ -62,7 +62,7 @@ col_blank<-c(128,128,128,0.5)
 intense.pal <- intPalHex
 #colors for the nodes are chosen from the very beginning
 
-subSizes <- read.table("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates.txt",header=TRUE, sep = ",")
+subSizes <- read.table("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates_recent.txt",header=TRUE, sep = ",")
 
 # for (p in seq(1,vcount(g))){
 #   nodes_size[p]<-log(((subSizes[V(g)$name[p]==as.vector(subSizes[,1]),2])/totalComm)*10000)/50
@@ -147,7 +147,7 @@ for(time in seq(ti,total_time,dt)){
   nodesDF<-data.frame(ID = c(1:vcount(gt)), NAME = V(gt)$name)
   edgesDF<-as.data.frame(get.edges(gt, c(1:ecount(gt))))
   
-  fileLoc<-paste("~/R/data/rComm_thresh_test_actualTime_sml14_", time*10, ".gexf", sep="")
+  fileLoc<-paste("~/R/data/rComm_thresh_test_actualTime_recent_", time*10, ".gexf", sep="")
   
   nodes_co<-cbind(layout.new,(rep(0, vcount(gt))))
   

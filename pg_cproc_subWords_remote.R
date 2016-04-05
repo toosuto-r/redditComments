@@ -16,7 +16,7 @@ ptm<-proc.time()
 pw<-getPass()
 
 #get the list of subreddits and their words
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates.txt"
+fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates_recent.txt"
 topSubTable<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
 
 
@@ -42,7 +42,7 @@ for (dateSet in seq(1,dateLim)){
   subList<-paste("'",preSubs,"'",sep="")
   
   # send one large query to get the full
-  currQuery<-paste("SELECT * FROM word_counts WHERE subreddit IN (", subList, ") AND date='",names(topSubTable)[dateSet],"' ORDER BY subreddit, count DESC;",sep="")
+  currQuery<-paste("SELECT * FROM word_counts_recent WHERE subreddit IN (", subList, ") AND date='",names(topSubTable)[dateSet],"' ORDER BY subreddit, count DESC;",sep="")
   result<- dbSendQuery(con, statement = currQuery)
   dataOut <- fetch(result, -1)
   dbClearResult(dbListResults(con)[[1]])
@@ -69,13 +69,15 @@ for (dateSet in seq(1,dateLim)){
   
   # run through all subs and merge into the current ever-larger word freq table
   # i.e. full outer join
+  # to make this more efficient, merge onto the first column only?
   for (p in seq(2,lim)){
     tmpSub<-currSub
     newSub<-dataOut[which(dataOut$subreddit %in% topSubTable[p,dateSet]),c("word","count")][1:wordLim,]
-    currSub<-merge(tmpSub,newSub,by="word",all=TRUE)
+    currSub<-merge(tmpSub,newSub[!is.na(newSub[,2]),],by="word",all=TRUE)
   }
   names(currSub)<-c("wordList",as.vector(topSubTable[,dateSet]))
-  freqTable<-currSub[order(currSub[,2], decreasing=TRUE),]
+  # freqTable<-currSub[order(currSub[,2], decreasing=TRUE),]
+  freqTable<-currSub
   # currSub<-currSub[order(currSub[,c(as.vector(topSubTable$'2015-02-16'))], decreasing=TRUE),]
   freqTable[is.na(freqTable)]<-0
   
@@ -109,7 +111,7 @@ for (dateSet in seq(1,dateLim)){
   row.names(subRelTable)<-as.vector(topSubTable[,dateSet])
   
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_",names(topSubTable)[dateSet],".txt",sep="")
+  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(subRelTable,fName,sep=",")
   
   
@@ -167,14 +169,14 @@ for (dateSet in seq(1,dateLim)){
   # then vertically cat to get a time-dynamic list
   timeLinkTmp<-rbind(timeLinkTmp,geTime)
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_",names(topSubTable)[dateSet],"_thresh.txt",sep="")
+  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],"_thresh.txt",sep="")
   write.table(timeLinkTmp,fName,sep=",")
   
 }
 
 pw<-"disregard this"
 
-fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates.txt",sep="")
+fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates_recent.txt",sep="")
 write.table(subSizeTable,fName,sep=",")
 
 cat("time elapsed, full process: ",(proc.time()-ptmMain)[3],"s.\n",sep="")
