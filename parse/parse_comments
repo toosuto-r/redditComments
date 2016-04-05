@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import datetime
+import argparse
+from reddit_comments import Parser
+
+arg_parser = argparse.ArgumentParser(description='Parse the reddit comment database, counting words by subreddit and time period and inserting to PostgreSQL')
+arg_parser.add_argument('-s', '--startdate', help='The date to start parsing comments for, in the format YYYY-MM-DD', required=True)
+arg_parser.add_argument('-e', '--enddate', help='The date to stop parsing comments for, in the format YYYY-MM-DD', required=True)
+arg_parser.add_argument('-d', '--data_dir', help='the directory holding the zipped up reddit comment archive', required=True)
+arg_parser.add_argument('-u', '--unzip_dir', help='the directory to decompress files into', required=True)
+arg_parser.add_argument('-t', '--tablename', help='the postgres table to insert into', default='word_counts')
+# TODO add timedelta, tablename, dbport, creds etc here
+
+args = arg_parser.parse_args()
+
+parser = Parser(data_dir=args.data_dir, unzip_dir=args.unzip_dir, tablename=args.tablename)
+parser.parse(datetime.datetime.strptime(args.startdate,'%Y-%m-%d'), datetime.datetime.strptime(args.enddate,'%Y-%m-%d'))
