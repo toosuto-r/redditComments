@@ -15,65 +15,85 @@
         </style>
     </head>
     <body>
-        <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
         <script src="d3.min.js?v=3.2.8"></script>
 
         <script type="text/javascript"charset="utf-8">
-        var container;
-        var color = d3.scale.linear()
-        .domain([200, 225, 300, 500])
-        .range(["yellow", "orangeRed", "red", "slateGrey"]);
-		
-		
+
+            // define the colour palette
+            var color = d3.scale.linear()
+                .domain([200, 225, 300, 500])
+                .range(["yellow", "orangeRed", "red", "slateGrey"]);
+
+            // TODO this will have to change to a variable file reference at some point, but fine for now
             d3.text("subRelTable_remote_2015-01-12_trunc100.csv", function(data) {
+                // TODO why use d3.text to read the file, then csv here?  maybe just use csv in the first place?
                 var parsedCSV = d3.csv.parseRows(data);
 				
-                container = d3.select("body")
+                d3.select("body")
                     .append("table")
-					
+
                     // select rows, add new rows for each row of data in the csv	
                     .selectAll("tr")
-                        .data(parsedCSV).enter()
-                        .append("tr")
-						
-                        // "magnify" the row label
-                        .on("mouseover", function mouseOver(d, i){
-                            var tabLim = d3.selectAll("tr")[0].length;
-                            d3.select("tr:nth-child("+(i+1)%tabLim+")").select("td").style({"font":"100% sans-serif","font-weight":"bold"})
-                        })
-                        
-                        .on("mouseout", function mouseOver(d, i){
-                            var tabLim = d3.selectAll("tr")[0].length;
-                            d3.select("tr:nth-child("+(i+1)%tabLim+")").select("td").style({"font":"0% sans-serif"})
-                            d3.select("td").style({"font":"100% sans-serif","font-weight":"bold"})
-                        })
+                    .data(parsedCSV).enter()
+                    .append("tr")
+
+                    // "magnify" the row label
+                    .on("mouseover", function mouseOver(d, i) {
+                        var tabLim = d3.selectAll("tr")[0].length;
+                        d3.select("tr:nth-child("+(i+1)%tabLim+")")
+                            .select("td")
+                            .style({"font":"100% sans-serif","font-weight":"bold"})
+                    })
+
+                    // "de-magnify" on mouseout
+                    .on("mouseout", function mouseOver(d, i){
+                        var tabLim = d3.selectAll("tr")[0].length;
+                        d3.select("tr:nth-child("+(i+1)%tabLim+")")
+                            .select("td")
+                            .style({"font":"0% sans-serif"})
+                        d3.select("td")
+                            .style({"font":"100% sans-serif","font-weight":"bold"})
+                    })
                         
                     // select tds and append new for each row of data split, and color with the scale
                     .selectAll("td")
-                        .data(function(d) { return d; }).enter()
-                        .append("td")
-                        .text(function(d) { return (d); })
-                        .style("background-color", function(d, i){
-                            return color(d);
-                        })
-                        .style({"height": "1px","width":"1px","font": "0% sans-serif"})
-                        
-                        //"magnify" the column label
-                        .on("mouseover", function mouseOver(d, i){
-                            d3.select(this).style({"font":"100% sans-serif"})
-                            //select the correct element from the top row
-                            d3.select("td:nth-child("+(i+1)%300+")").style({"font":"100% sans-serif","font-weight":"bold","width":"170px"})
-                            //select the correct element from the left column
-                        })
-						
-                        .on("mouseout", function mouseOver(d, i){
-                            d3.select(this).style({"line-height": "20px","font": "0% sans-serif"})
-                            d3.select("td:nth-child("+(i+1)%300+")").style({"font":"0% sans-serif","width":"1px"})
-                            d3.select("td").style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
-                        })
-                        d3.select("td").style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
-                        //d3.select("tr").style({"border-bottom":"2px solid black"})
+                    .data(function(d) { return d; }).enter()
+                    .append("td")
+                    .text(function(d) {
+                        return (d);
+                    })
+                    .style("background-color", function(d, i) {
+                        return color(d);
+                    })
+                    .style({"height": "1px","width":"1px","font": "0% sans-serif"})
+
+                    // "magnify" the column label
+                    .on("mouseover", function mouseOver(d, i) {
+                        d3.select(this)
+                            .style({"font":"100% sans-serif"})
+                        //select the correct element from the top row
+                        d3.select("td:nth-child("+(i+1)%300+")")
+                            .style({"font":"100% sans-serif","font-weight":"bold","width":"170px"})
+                        //select the correct element from the left column
+                        // TODO do these comments refer to what's above them rather than below?
+                    })
+
+                    // "de-magnify" the column label
+                    .on("mouseout", function mouseOver(d, i){
+                        // TODO some commenting in here
+                        d3.select(this)
+                            .style({"line-height": "20px","font": "0% sans-serif"})
+                        d3.select("td:nth-child("+(i+1)%300+")")
+                            .style({"font":"0% sans-serif","width":"1px"})
+                        d3.select("td")
+                            .style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
+                    })
+
+                // TODO so this applies to everything, maybe best put in css then?
+                d3.select("td")
+                    .style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
             });
+
         </script>
     </body>
 </html>
