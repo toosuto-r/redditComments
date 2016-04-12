@@ -3,6 +3,24 @@
     <head>
         <meta charset="utf-8">
         <style>
+            .hov {
+                /* style of hovered elements */
+                font: 100% sans-serif;
+                width: 170px;
+            }
+            
+            .hovB {
+                /* style of matching row/column labels on hover */
+                font: 100% sans-serif;
+                font-weight: bold;
+                width: 170px;
+            }
+            
+            .unhov {
+                /* return to this style after hover */
+                font: 0% sans-serif;
+            }
+            
             table {
                 border-collapse: collapse;
                 font: 12px sans-serif;
@@ -11,69 +29,94 @@
             td {
             	/* the padding effectively defines collapsed cell size */
                 padding: 2px;
+                font: 0% sans-serif;
             }
+     
+            
+            
         </style>
     </head>
     <body>
-        <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
         <script src="d3.min.js?v=3.2.8"></script>
 
         <script type="text/javascript"charset="utf-8">
-        var container;
-        var color = d3.scale.linear()
-        .domain([200, 225, 300, 500])
-        .range(["yellow", "orangeRed", "red", "slateGrey"]);
-		
-		
-            d3.text("subRelTable_remote_2015-01-12_trunc100.csv", function(data) {
-                var parsedCSV = d3.csv.parseRows(data);
-				
-                container = d3.select("body")
+
+            // define the colour palette
+            var color = d3.scale.linear()
+                .domain([10, 30, 6000])
+                .range(["orangeRed", "white", "royalBlue"]);
+
+            // TODO this will have to change to a variable file reference at some point, but fine for now
+            d3.csv("subRelTable_remote_recent_2016-01-04_trunc100_sig.csv", function(data) {
+
+                var rowString = d3.csv.format(data);
+                var parsedCSV = d3.csv.parseRows(rowString);
+                
+                d3.select("body")
                     .append("table")
-					
+
                     // select rows, add new rows for each row of data in the csv	
                     .selectAll("tr")
-                        .data(parsedCSV).enter()
-                        .append("tr")
-						
-                        // "magnify" the row label
-                        .on("mouseover", function mouseOver(d, i){
-                            var tabLim = d3.selectAll("tr")[0].length;
-                            d3.select("tr:nth-child("+(i+1)%tabLim+")").select("td").style({"font":"100% sans-serif","font-weight":"bold"})
-                        })
-                        
-                        .on("mouseout", function mouseOver(d, i){
-                            var tabLim = d3.selectAll("tr")[0].length;
-                            d3.select("tr:nth-child("+(i+1)%tabLim+")").select("td").style({"font":"0% sans-serif"})
-                            d3.select("td").style({"font":"100% sans-serif","font-weight":"bold"})
-                        })
+                    .data(parsedCSV).enter()
+                    .append("tr")
+
+                    // "magnify" the row label
+                    .on("mouseover", function mouseOver(d, i) {
+                        var tabLim = d3.selectAll("tr")[0].length;
+                        // use nth-child to select the first td in this nth tr, which contains the subreddit label (effective row header), which needs magnified
+                        d3.select("tr:nth-child("+(i+1)%tabLim+")")
+                            .select("td")
+                            .attr("class", "hovB")
+                    })
+
+                    // "de-magnify" on mouseout
+                    .on("mouseout", function mouseOver(d, i){
+                        var tabLim = d3.selectAll("tr")[0].length;
+                        d3.select("tr:nth-child("+(i+1)%tabLim+")")
+                            .select("td")
+                            .attr("class", "unhov")
+                        d3.select("td")
+                            .attr("class","hovB")
+                    })
                         
                     // select tds and append new for each row of data split, and color with the scale
                     .selectAll("td")
-                        .data(function(d) { return d; }).enter()
-                        .append("td")
-                        .text(function(d) { return (d); })
-                        .style("background-color", function(d, i){
-                            return color(d);
-                        })
-                        .style({"height": "1px","width":"1px","font": "0% sans-serif"})
-                        
-                        //"magnify" the column label
-                        .on("mouseover", function mouseOver(d, i){
-                            d3.select(this).style({"font":"100% sans-serif"})
-                            //select the correct element from the top row
-                            d3.select("td:nth-child("+(i+1)%300+")").style({"font":"100% sans-serif","font-weight":"bold","width":"170px"})
-                            //select the correct element from the left column
-                        })
-						
-                        .on("mouseout", function mouseOver(d, i){
-                            d3.select(this).style({"line-height": "20px","font": "0% sans-serif"})
-                            d3.select("td:nth-child("+(i+1)%300+")").style({"font":"0% sans-serif","width":"1px"})
-                            d3.select("td").style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
-                        })
-                        d3.select("td").style({"font":"100% sans-serif","width":"170px","font-weight":"bold"})
-                        //d3.select("tr").style({"border-bottom":"2px solid black"})
+                    .data(function(d) { return d; }).enter()
+                    .append("td")
+                    .text(function(d) {
+                        return (d);
+                    })
+                    .style("background-color", function(d, i) {
+                        return color(d);
+                    })
+
+                    // "magnify" the column label
+                    .on("mouseover", function mouseOver(d, i) {
+                        d3.select(this)
+                        .attr("class","hov")
+                        //select the matching nth column label (effective header), as before with the rows
+                        d3.select("td:nth-child("+(i+1)%300+")")
+                        .attr("class","hovB")
+                    })
+
+                    // "de-magnify" the column label and the cell addressed
+                    .on("mouseout", function mouseOver(d, i){
+                        d3.select(this)
+                        .attr("class","unhov")
+                        // restore effective header
+                        d3.select("td:nth-child("+(i+1)%300+")")
+                        .attr("class","unhov")
+                        // select the top-left cell and restore it, in case it was modified
+                        d3.select("td")
+                        .attr("class","hovB")
+                    })
+                
+                // ensure the upper-left title cell is always visible
+                // handily, this also keeps the left column wide to avoid "jiggling" on mouseover.
+                d3.select("td")
+                .attr("class","hovB")
             });
+
         </script>
     </body>
 </html>

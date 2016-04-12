@@ -1,21 +1,62 @@
-
 <html>
 <head bgcolor="#FFFCE9">
 <meta charset="UTF-8">
 <style type="text/css">
-  #graph-container {
-    max-width: 800px;
-    height: 800px;
+#graph-container {
+    max-width: 700px;
+    height: 700px;
     margin: auto;
-	background: #FFFCE9
-  }
+    background: #FFFCE9
+    }
+
+.hov {
+    /* style of hovered elements */
+    font: 100% sans-serif;
+    width: 170px;
+    }
+
+.hovB {
+    /* style of matching row/column labels on hover */
+    font: 100% sans-serif;
+    font-weight: bold;
+    width: 170px;
+}
+
+.unhov {
+    /* return to this style after hover */
+    font: 0% sans-serif;
+    line-height: 20px;
+}
+
+.thisTime {
+    background-color: #FFFFFF
+}
+
+table {
+    border-collapse: collapse;
+    margin: auto;
+    font: 12px sans-serif;
+    width: 700px;
+}
+
+td {
+    /* the padding effectively defines collapsed cell size */
+    padding: 2px;
+    font: 2% sans-serif;
+    align: center;
+    line-height: 20px;
+}
+  
 </style>
 </head>
 <body bgcolor="#FFFCE9">
+<button onclick="loopKill(intervalId)">Stop</button>
+<button onclick="startSigLoop(lup)">Resume</button>
 <div bgcolor="#FFFCE9" id="graph-container"></div>
 <script src="sigma.min.js"></script>
 <script src="sigma.parsers.gexf.min.js"></script>
 <script src="sigma.plugins.animate.min.js"></script>
+<script src="d3.min.js?v=3.2.8"></script>
 
 <script>
 
@@ -27,12 +68,14 @@ var i,
     },
     killSwitch=0,
     step=0,
-    camOut;
+    camOut,
+    intervalId;
 
 // variables for the sigma control loop	
-var lup=10,
+var lup,
     lupStep=10,
-    endLup=70,
+    endLup=90,
+    startTime,
     filePrefix='rComm_thresh_test_actualTime_recent_',
     file1,
     file2,
@@ -48,18 +91,98 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-// this is the interval function controlling the sigma iteration
-// call the interval function until all the desired files have run
-var intervalId = setInterval(function(){
-    file1 = filePrefix+lup+'.gexf';
-    file2 = filePrefix+(lup+lupStep)+'.gexf';
-    runTwoGex(file1,file2);
-    lup=lup+lupStep;
+function loopKill(intervalId) {
+    startTime=lup
+    clearInterval(intervalId)
+}
 
-    if(lup >= endLup-lupStep){
-        clearInterval(intervalId);
-    }
-},timeStep)
+
+
+// define the colour palette
+var color = d3.scale.linear()
+    .domain([Date.parse("2016-01-01"), Date.parse("2016-02-28")])
+    .range(["grey","lightblue"]);
+
+// TODO this will have to change to a variable file reference at some point, but fine for now
+d3.text("subsDates.txt", function(data) {
+    console.log(data)
+    var parsedCSV = d3.csv.parseRows(data);
+    
+    d3.select("body")
+        .append("table")
+
+        // select rows, add new rows for each row of data in the csv	
+        .selectAll("tr")
+        .data(parsedCSV).enter()
+        .append("tr")
+            
+        // select tds and append new for each row of data split, and color with the scale
+        .selectAll("td")
+        .data(function(d) { return d; }).enter()
+        .append("td")
+        .text(function(d) {
+            return (d);
+        })
+        .style("background-color", function(d, i) {
+            return color(Date.parse(d));
+        })
+
+        
+        // "magnify" the column label
+        .on("mouseover", function mouseOver(d, i) {
+            d3.select(this)
+            .attr("class","hov")
+            .attr("align","center")
+        })
+
+        // "de-magnify" the column label and the cell addressed
+        .on("mouseout", function mouseOver(d, i){
+            d3.select(this)
+            .attr("class","unhov")
+
+        })
+        
+        .on("click", function(d,i){
+        loopKill(intervalId)
+        console.log(i)
+        startSigLoop(i*10)
+        })
+        
+        
+        
+    // this is the interval function controlling the sigma iteration
+    // call the interval function until all the desired files have run
+    
+});
+
+function startSigLoop(startTime){
+        lup=startTime
+        if (typeof(lup)=="undefined"){lup=0}
+        intervalId = setInterval(function(){
+            file1 = filePrefix+lup+'.gexf';
+            file2 = filePrefix+(lup+lupStep)+'.gexf';
+            runTwoGex(file1,file2);
+            
+            
+            // select the current date in the table, and make it visible
+            d3.selectAll("td")
+            .attr("class","unhov")
+            
+            d3.select("td:nth-child("+((lup/10)+1)+")")
+            .attr("class","hovB")
+            .attr("align","center")
+            
+            lup=lup+lupStep;
+            
+            if(lup == endLup-lupStep){
+                clearInterval(intervalId);
+            }
+        },timeStep)
+    };
+
+
+
+
 
 // define border renderer
 // We gave our own name 'border' to the custom renderer
@@ -227,9 +350,6 @@ function runTwoGex(fileA,fileB){
         }
     );
 }
-
-
-
 
 </script>
 </body>

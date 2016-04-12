@@ -167,9 +167,9 @@ class Parser():
     def dump_postgres(self, date, word_counts):
         """Takes a dictionary of word counts for a given time window and inserts into PostgreSQL"""
 
-        # remove value 1 elements from dict (probably noise, saves space)
+        # remove words longer than 20 chars, an words that only appear once from dict (probably noise, saves space)
         for subreddit in word_counts:
-            word_counts[subreddit] = {k:v for (k, v) in word_counts[subreddit].iteritems() if v != 1}
+            word_counts[subreddit] = {k:v for (k, v) in word_counts[subreddit].iteritems() if v > 1 and len(k) < 20}
 
         # dump to a temp csv first
         self.print_withtime("dumping to temp csv /tmp/reddit_comments.csv ...")
