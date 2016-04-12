@@ -25,6 +25,7 @@ stopWords<-read.table(fName,sep=",",header = FALSE)
 
 lim<-nrow(topSubTable)
 dateLim<-dim(topSubTable)[2]
+
 wordLim<-3000
 
 subSizeTable<-as.data.frame(matrix(nrow=lim,ncol=dateLim*2))
@@ -38,7 +39,9 @@ for (dateSet in seq(1,dateLim)){
   
   
   #define the query to return the pop. table (a list of all subs)
-  preSubs<-paste(topSubTable[,dateSet],collapse="','")
+  theseTopSubs<--topSubTable[,dateSet]
+  noNASubList<-theseTopSubs[!is.na(theseTopSubs)]
+  preSubs<-paste(noNASubList,collapse="','")
   subList<-paste("'",preSubs,"'",sep="")
   
   # send one large query to get the full
@@ -86,6 +89,10 @@ for (dateSet in seq(1,dateLim)){
   # note zero in both does not contribute to the weight sum
   
   # additionally, record the sub sizes along with the sub
+  
+  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
+  write.table(freqTable,fName,sep=",")
+  
   cat("time elapsed for table merge (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
   
   subRelTable<-as.data.frame(matrix(nrow=lim,ncol=lim))
@@ -97,7 +104,7 @@ for (dateSet in seq(1,dateLim)){
     currPer<-freqTable[,s+1]/sum(freqTable[,s+1])*100
     for(t in seq(s+1,lim)){
       scanPer<-freqTable[,t+1]/sum(freqTable[,t+1])*100
-      weight<-sum((abs(currPer-scanPer)+1)*(currPer+scanPer))
+      weight<-sum((abs(currPer-scanPer)+0)*(currPer+scanPer))
       subRelTable[s,t]<-weight
     }
   }
@@ -110,9 +117,15 @@ for (dateSet in seq(1,dateLim)){
   names(subRelTable)<-as.vector(topSubTable[,dateSet])
   row.names(subRelTable)<-as.vector(topSubTable[,dateSet])
   
+  #round the subRelTable to make it a little nicer in display
+  subRelRound<-subRelTable
+  for (v in seq(1,dim(subRelTable)[2])){
+    subRelRound[,v]<-signif(subRelTable[,v],3)
+  }
+  
   
   fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
-  write.table(subRelTable,fName,sep=",")
+  write.table(subRelRound,fName,sep=",")
   
   
   cat("time elapsed subRelTable formation (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")

@@ -7,7 +7,7 @@ library("colorspace")
 
 #load the edges with time stamp
 #there are three columns in edges: id1,id2,time
-edges <- read.table("~/R/data/rcomments/subRelTable_remote_recent_2016-01-11_thresh.txt",header=T,sep=",")
+edges <- read.table("~/R/data/rcomments/subRelTable_remote_recent_2016-01-04_thresh.txt",header=T,sep=",")
 
 #generate the full graph
 g <- graph.data.frame(edges,directed=F)
@@ -81,7 +81,7 @@ layout.old <- norm_coords(layout.graphopt(gt), xmin = -1, xmax = 1, ymin = -1, y
 total_time <- max(E(g)$time)
 #This is the time interval for the animation. In this case is taken to be 1/10
 #of the time (i.e. 10 snapshots) between adding two consecutive nodes
-dt <- 0.25
+dt <- 1
 #Output for each frame will be a png with HD size 1600x900 <img src="http://estebanmoro.org/wp-includes/images/smilies/simple-smile.png" alt=":)" class="wp-smiley" style="height: 1em; max-height: 1em;">
 # png(file="animExample%03d.png", width=1600,height=900)
 
@@ -103,7 +103,7 @@ for(time in seq(ti,total_time,dt)){
   
   
   ptm<-proc.time()
-  layout.new <- layout_with_fr(gt,coords=layout.old,niter=500,start.temp=0.05,grid="nogrid",dim=2)
+  layout.new <- layout_with_fr(gt,coords=layout.old,niter=2000,start.temp=0.05,grid="nogrid",dim=2)
   #plot the new graph
   print(proc.time()-ptm)
   revTime<-total_time+1-time
