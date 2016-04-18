@@ -84,6 +84,9 @@ for (dateSet in seq(1,dateLim)){
   # currSub<-currSub[order(currSub[,c(as.vector(topSubTable$'2015-02-16'))], decreasing=TRUE),]
   freqTable[is.na(freqTable)]<-0
   
+  
+  wordSums<-rowSums(freqTable[,2:dim(freqTable)[2]])
+  thisLexicon<-data.frame(freqTable[,1],wordSums)
   # run a loop and for each pairing calculate the difference in word use percentages 
   # and multiply by the sum of word use between them to favour high-ranking words
   # note zero in both does not contribute to the weight sum
@@ -92,6 +95,9 @@ for (dateSet in seq(1,dateLim)){
   
   fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(freqTable,fName,sep=",")
+  
+  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/lexicon_recent_",names(topSubTable)[dateSet],".txt",sep="")
+  write.table(thisLexicon,fName,sep=",")
   
   cat("time elapsed for table merge (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
   

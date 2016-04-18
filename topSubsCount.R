@@ -5,6 +5,7 @@ setwd("~/R/data")
 ##connect to db and return test results
 
 ptm<-proc.time()
+subLim
 
 #get pass
 pw<-getPass()
@@ -22,19 +23,19 @@ cat("time elapsed for date fetch: ",(proc.time()-ptm)[3],"s.\n",sep="")
 
 ptm<-proc.time()
 
-topSubTable<-as.data.frame(matrix(nrow=300,ncol=dim(datesUsed)[1]*2))
+topSubTable<-as.data.frame(matrix(nrow=subLim*2,ncol=dim(datesUsed)[1]*2))
 
 
 
 for (p in seq(1,dim(datesUsed)[1])){
 currDate<-datesUsed[p,]
-currQuery<-paste("SELECT subreddit, SUM(count) from word_counts WHERE date='",currDate,"'GROUP BY subreddit ORDER BY sum DESC LIMIT 300",sep="")
+currQuery<-paste("SELECT subreddit, SUM(count) from word_counts WHERE date='",currDate,"'GROUP BY subreddit ORDER BY sum DESC LIMIT ", subLim*2,sep="")
 result<- dbSendQuery(con, statement = currQuery)
 dataOut <- fetch(result, -1)
 dbClearResult(dbListResults(con)[[1]])
 
-if (dim(dataOut)[1]<=300) {
-  extender<-as.data.frame(matrix(nrow=300-dim(dataOut)[1],ncol=2))
+if (dim(dataOut)[1]<=subLim*2) {
+  extender<-as.data.frame(matrix(nrow=subLim*2-dim(dataOut)[1],ncol=2))
   names(extender)<-names(dataOut)
   dataOut<-rbind(dataOut,extender)
 }
@@ -45,7 +46,7 @@ topSubTable[,(p*2)]<-dataOut$sum
 }
 dbDisconnect(con)
 
-names(topSubTable)<-datesUsed$date
+names(topSubTable)[seq(1,dim(datesUsed)[1]*2,2)]<-datesUsed$date
 
 fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates_full.txt"
 write.table(topSubTable,fName,sep=",")
