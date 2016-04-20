@@ -1,0 +1,296 @@
+<html>
+<head bgcolor="#FFFCE9">
+<meta charset="UTF-8">
+<style type="text/css">
+#graph-container {
+    max-width: 800px;
+    height: 700px;
+    background: #FFFCE9
+    }
+   
+table {
+    border-collapse: collapse;
+    border: 2px solid white;
+    margin: auto;
+    font: 0px sans-serif;
+}
+
+td {
+    padding: 5px;
+    border: 1px solid white;
+}
+
+#tableHolder {
+    position: absolute;
+    top: 6px;
+    left: 820px;
+    margin: auto;
+}
+
+#selectHolder {
+    position: absolute;
+    top: 300px;
+    left: 820px;
+    margin: auto;
+    width: 100px;
+}
+
+</style>
+</head>
+<body bgcolor="#FFFFFF">
+<div bgcolor="#FFFCE9" id="graph-container"></div>
+<script src="sigma.min.js"></script>
+<script src="sigma.parsers.gexf.min.js"></script>
+<script src="sigma.plugins.animate.min.js"></script>
+<script src="d3.min.js?v=3.2.8"></script>
+<div id="selectHolder"></div>
+<div id="tableHolder">
+<script>
+
+var dataHolder,
+    subComm,
+    thisWordData=[],
+    subLabels = [],
+    wordData,
+    optionIndex,
+    nodeColorHolder,
+    optionLabelSelect;
+    
+// functions for getting a usable colour out    
+function componentToHex(c) {	
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+// add the method to get node neighbours
+sigma.classes.graph.addMethod('neighbors', function(nodeId) {
+    var k,
+        neighbors = {},
+        index = this.allNeighborsIndex[nodeId] || {};
+
+    for (k in index)
+      neighbors[k] = this.nodesIndex[k];
+
+    return neighbors;
+  });
+
+// add a border function (Yomguithereal)
+sigma.canvas.nodes.border = function(node, context, settings) {
+    var prefix = settings('prefix') || '';
+
+    context.fillStyle = node.color || settings('defaultNodeColor');
+    context.beginPath();
+    context.arc(
+        node[prefix + 'x'],
+        node[prefix + 'y'],
+        node[prefix + 'size'],
+        0,
+        Math.PI * 2,
+        true
+    );
+
+    context.closePath();
+    context.fill();
+
+    // Adding a border
+    context.lineWidth = node.borderWidth || 1;
+    context.strokeStyle = node.borderColor || '#fff';
+    context.stroke();
+};
+    
+function makeColoredTable(nodeLabel, nodeCol, wordData) {
+    // get the node color in hex format
+    nodeRGB=rgbToHex(parseInt(nodeCol.split(",")[0].split("(")[1]),parseInt(nodeCol.split(",")[1]),parseInt(nodeCol.split(",")[2]))
+    
+    // find the matching node label in the list of subs and their communities
+    var subInd=dataHolder.indexOf(nodeLabel)
+    subComm = dataHolder[subInd+1]
+    var rowLength = wordData.length 
+    
+    // take the relevant word and RV data into a var
+    for (i=0; i<rowLength; i++){
+        thisWordData[i]=wordData[i].slice(subComm*2-2,subComm*2)
+    }
+    
+    // clear any previous tables
+    d3.selectAll('table').remove();
+    d3.selectAll('tr').remove();
+    d3.selectAll('td').remove();
+
+    d3.select("#tableHolder")
+    .append("table")
+    
+    // select rows, add new rows for each row of data in the csv	
+    .selectAll("tr")
+    
+    .data(thisWordData).enter()
+    .append("tr")
+        
+    // select tds and append new for each row of data split, and color with the scale
+    .selectAll("td")
+    .data(function(d) { return d; }).enter()
+    .append("td")
+    .text(function(d) {
+        return (d);
+    })
+    
+    // make table nice table
+    d3.selectAll("tr").style("font", "12px sans-serif").style("padding","4px").style("background-color",nodeRGB)
+    d3.select("tr").style("font-weight","bold")
+        
+ }   
+    
+    
+
+ // main call - read the subreddit/community list first, format it usefully   
+d3.text("communitySubList2016-02-22.txt", function(data) {
+
+    dataHolder = d3.csv.parseRows(data);
+    dataHolder = [].concat.apply([], dataHolder);
+    
+    // read the community top words table
+    d3.text("communityWords2016-02-22.txt", function(data) {
+        wordData = d3.csv.parseRows(data);
+        // select the even elements to get the list of subreddits
+        for (i = 2; i < dataHolder.length; i++) {
+            if(i % 2 === 0) { // index is even
+                subLabels.push(dataHolder[i]);
+            }
+        }
+        
+        // instantiate new sigma and give it sensible settings
+        s = new sigma({
+            renderer: {
+                container: document.getElementById('graph-container'),
+                type: 'canvas'
+            },
+            settings: {
+                defaultEdgeType:'curve',
+                defaultLabelSize: 14,
+                labelThreshold: 5,
+                maxEdgeSize: 0.8,
+                defaultNodeType: 'border',
+                animationsTime: 1000,
+                drawEdges: true
+            }
+        })
+
+        // read a gexf of the week's data
+        sigma.parsers.gexf(
+            "rComm_thresh_test_actualTime_recent_3.gexf",s,
+            function (){
+                s.refresh()
+
+                // store the original colours and sizes, so they can be restored
+                s.graph.nodes().forEach(function(n) {
+                    n.originalColor = n.color;
+                    n.originalSize = n.size;
+                })
+                
+                s.graph.nodes().forEach(function(e) {
+                    e.originalColor = e.color;
+                    e.originalSize = e.size;
+                })
+                
+                // make the word table from the first node (usually askreddit)
+                makeColoredTable(s.graph.nodes(1).label, s.graph.nodes(1).color, wordData)
+                
+                // on click, highlight that node and its neighbours
+                s.bind('clickNode',function(e){
+                     var nodeId = e.data.node.id,
+                    toKeep = s.graph.neighbors(nodeId);
+                    // add the node clicked to the neighbours selection
+                    toKeep[nodeId] = e.data.node;
+
+                    s.graph.nodes().forEach(function(n) {
+                        n.size = n.originalSize
+                        if (toKeep[n.id]){
+                            n.color = n.originalColor;
+                        } else {
+                            n.color = '#eee';
+                        }
+                    });
+
+                    s.graph.edges().forEach(function(e) {
+                        if (toKeep[e.source] && toKeep[e.target])
+                            e.color = e.originalColor;
+                        else
+                            e.color = '#eee';
+                    });
+
+                    // Since the data has been modified, we need to
+                    // call the refresh method to make the colors
+                    // update effective.
+                    s.refresh();
+
+                    var nodeLabel = e.data.node.label
+                    var nodeCol = e.data.node.color
+                    
+                    // make the word table for the selected data
+                    makeColoredTable(nodeLabel, nodeCol, wordData)
+                    
+                    
+                });
+
+                // When the stage is clicked, we just color each
+                // node and edge with its original color.
+                s.bind('clickStage', function(e) {
+                    s.graph.nodes().forEach(function(n) {
+                      n.color = n.originalColor;
+                    });
+
+                    s.graph.edges().forEach(function(e) {
+                      e.color = e.originalColor;
+                    });
+
+                    // Same as in the previous event:
+                    s.refresh();
+                });
+                
+                s.graph.nodes().forEach(function(n) {
+                        n.size = n.originalSize
+                        n.color = n.originalColor;
+                    });
+                
+                // add the select dropdown element, populated with the subreddit labels stored earlier
+                var selector = d3.select("#selectHolder")
+                        .append("select").on("change",change),
+                    options = selector.selectAll("option").data(subLabels)
+                        .enter().append("option")
+                        .attr("value",function(d) { return d; })
+                        .text(function(d) { return d; });
+                        
+                // called when there is a change in the select box
+                function change() {
+                    optionIndex   = selector.property('selectedIndex')
+                    
+                    // find the node with the matching label
+                    for (i=0;i<s.graph.nodes().length;i++){
+                        if (s.graph.nodes()[i].label==subLabels[optionIndex]){
+                            optionLabelSelect=s.graph.nodes()[i].id;
+                        }
+                    }
+                    
+                    //first restore the initial colour (in case of previous highlighting), then recolour as charcoal
+                    s.graph.nodes().forEach(function(n) {
+                        if (n.id===optionLabelSelect){
+                            n.color = n.originalColor;
+                            n.color = '#555'
+                        } else {
+                            n.color = '#eee';
+                        }
+                    })
+                    s.refresh()
+                }
+            }
+        )
+    })
+})
+</script>
+</div>
+</body>
+</html>
