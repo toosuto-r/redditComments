@@ -3,8 +3,8 @@
 <meta charset="UTF-8">
 <style type="text/css">
 #graph-container {
-    max-width: 800px;
-    height: 700px;
+    max-width: 80%;
+    height: 80%;
     background: #FFFCE9
     }
    
@@ -22,17 +22,17 @@ td {
 
 #tableHolder {
     position: absolute;
-    top: 6px;
-    left: 820px;
+    top: 5px;
+    left: 81%;
     margin: auto;
 }
 
 #selectHolder {
     position: absolute;
     top: 300px;
-    left: 820px;
+    left: 81%;
     margin: auto;
-    width: 100px;
+    width: 18%;
 }
 
 </style>
