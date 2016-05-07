@@ -39,7 +39,7 @@ for (dateSet in seq(1,dateLim)){
   
   
   #define the query to return the pop. table (a list of all subs)
-  theseTopSubs<--topSubTable[,dateSet]
+  theseTopSubs<-topSubTable[,dateSet]
   noNASubList<-theseTopSubs[!is.na(theseTopSubs)]
   preSubs<-paste(noNASubList,collapse="','")
   subList<-paste("'",preSubs,"'",sep="")
