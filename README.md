@@ -1,59 +1,46 @@
 # redditComments
 Repo for reddit comment database manipulation and lexical analysis
 
-This set of scripts is used to access reddit comment data in a PostgreSQL database accessed through RPostgresQL, for the purpose of mapping lexical connection between subreddits. There are two DB structures used
+This set of scripts is used to access reddit comment data in a PostgreSQL database accessed through RPostgresQL, for the purpose of mapping lexical connection between subreddits. These scripts run in R with required packages:
+RPostgresQL;
+plyr;
+igraph;
+rgexf;
+colorspace.
 
-  A.  Native comments - all fields (most importantly, the subreddit, body and UTC stamp of post) in different fields, and one document per post.         This system has an additional field with the body text stemmed into postgres' tsvector format, which is searchable for word frequency.
-  B.  A DB of words created by directly processing each line of the input JSON data, adding a field for subreddit, word, and UTC stamp. This is         vastly more rapid in the initial data input phase, but lacks ability to look for phrases, and contains no information on the frequency          of each word within a document.
-  
-Either of these sets can be used to generate word frequency tables for each subreddit for any time interval. We use a test set from January 2015, and generate the top 3000 word frequency table from the top 300 subreddits. To map lexical similarity between a subreddit pair, we compare the percentage use of each word in each subreddit (perA, perB) through the metric:
-    
-    weight <- (abs(perA-perB)+1)*(perA+perB)
-    
-The first term in brackets takes into account the word frequency difference, and the second term weights differences between frequently-used words more highly, to reduce noise from very low-ranked words. The addition of 1 to the first bracketed term is to ensure the weight size increases when multiplied. There are some considerations to be made with which words to include - for example "deleted" appears frequently, but we manually remove it from each subreddit (effectively looking only at the top 2999 words) since this chiefly will come from deleted comments, which don't reflect the lexical use patterns of the subreddit's userbase.
+Note the initial parsing scripts (redditComments/parse/*.*) are used to take the monthly files containing the reddit comment data and sensibly put it into a PostgreSQL DB. Each comment is treated as a single line (valid for the JSON format), non-letter characters are converted into spaces and the resulting "words" are added to a word count for that time interval. The resulatant DB contains the start-date of the time interval, word, subreddit and count, and is is assumed all scripts here can access that DB. More details can be found in /parse/readMe.
 
-This simple metric provides a good match between certain subreddits (e.g. "motorcycles" and "bicycling") and a very poor match between other subreddits (e.g. subreddits for giveaways, meetups, foreign subreddits etc. and everything else). We can do this for each subreddit pair in turn (n^2-n pairings). A colour-coded table provides a good visualisation, but some of the remaining scripts select connections over a certain threshold (top 4%) of connection strength, and prepare a link-and-wieght network diagram in gephi, which shows tight knots of subreddits, effectively mapping the lexical connections. The thresholding simply allows meaningful node distribution.
+The scripts in this directory handle the generation of word frequency tables and top subreddit listings for a time interval. getPass is used to return a text password for the DB - this can be altered to provde a password in whatever way you see fit. The remaining three central scripts handle everything else.
 
-The weights between these subreddits depend on the full word frequency tables, however to reduce this to at-a-glance similarity, we can devise a metric based on the difference between word use in the currently queried subreddit pair (currUse) and the main reddit corpus (fullUse). The metric used for this is:
-    
-    linkValue <- (abs(currUse-fullUse)+1)*(currUse)/weight
-    
-Similar to above, this prioritises words with low weight (i.e. high similarity) and a large difference from the main corpus. The second currUse term again values highly-used words.
+All scripts use ~/R/data/rcomments to store and recall data - by ensuring this folder exists, the changes necessary to run the scripts can be minimised.
 
-##############################
+# topSubsCount.R
+This script gets the top N subreddits (defined by subLim, line 8, default 300) by word usage for each distinct date in the database. The "con" variable contains all the necessary DB connection information, and should be changed where necessary.
+The first DB call pulls all the distinct dates from the DB. The second DB call set is located in the loop, which goes through each date and takes the top N subreddits out.
+The resultant table has headers of the date, and each row is the top N subreddits, and is written to the location defined by topSubTableFile (line 9). The location of this file should be noted for use in the next script.
 
-List of scripts, and description:
-  
-  
-  pg_proc_subWords.R
-    This script accesses the database, and pulls the word tables for each subreddit using a ts_stat call and SELECT on the ts_vector column to      limit to each of the current subreddits (a list of which was previously pulled directly from the DB with a SELECT COUNT(*) call).
-    
-  getPass.R
-    Quick function to grab the password for the DB.
-  
-  subSizes.R
-    This function goes through each of the subs and pulls the total number of word entries, if this step was neglected in the inital call
-    (proTip: it was)
-  
-  fullWordTable.R
-    this pulls the full usage of all words in the 300 subreddits analysed, using the first subreddit as a base and subsequently adding the
-    counts of words in the new subreddit which match the current base, and appending those that didn't (and their counts) on the end, to be used     in the next iteration. 
-  
-  subTableProc.R
-  subTableProc_strongLinks.R
-    These two functions open a subreddit pair, use match() to find the links between them, take into account missing links and create a
-    temporary table with the percentage use of words in sub A as the 3000 words, and the remaining added words as words which exist in B but not
-    A. the second column is the use of the same words in the same order, but for sub B. We use the above weight metric to calculate the
-    difference in word frequency, and sum this table. At the same time, we can look for the words responsible for the lowest weight, and analyse
-    each word's difference from the main corpus, and use this in the linkValue metric above. The relational table is then written to file.
-  
-  subRelgexfPrep_threshold.R
-    This script goes through each link in the table created above, and writes it into a suitable format to be accepted by gephi (node 1 name,
-    node 2 name, link weight). This only happens for link weights above a certain value (top 4%). The links are also subtracted from 1, to 
-    create a larger weight for tighter links.
-  
-  gexf_subRel.R
-    This script is largely lifted directly from https://gist.github.com/Vessy with a couple of minor tweaks: the subreddit sizes are used for 
-    node size, but as log of their actual size; the links are given no colour, to allow colouration by the source node after modularity; and of 
-    course a differenct dataset. The script uses Fruchterman-Reingold layout, which can be reasonably well recreated in gephi itself with the 
-    same layout, gravity <- 0.5 and size <- 3000.
+# pc_cproc_subWords_remote.R
+This script does the bulk of the data processing. Using the same database and the list of top subreddits, it queries the DB for the top 3000 words from each subreddit in the top N returned in the previous script. It requires the same DB access credentials as before, as well as the locations of the top subreddit table, and an optional list of English stop words to run. 
+If this list is empty, the script will run but retain words like I and The. Additionally, this stop words file should contain fragments like "http", words that aren't lexical contributors to a subreddit.
+With these as input, the script will run through all the dates in the header of the top subreddits and get any words that match any of the subreddits in the column for that date. The last result set returned is saved to file for result checking.
+The results then need to be combined into a table with all words used that week in the first column and the counts for each subreddit - this is handled by successive "merge" operations (essentially full outer joins) in the loop at line 85. The resultant word frequency table for the top 300 subreddits contains the subreddit name and counts of word used. This section also creates a full lexicon for all subreddits for that week.
+The word frequency lists can then be directly compared with the metric in line 123 to get the separation between the subreddits ("weight"), which is put into a two-way table (subRelTable) and saved with data rounded to 3 significant figures for later use.
+The final step in this script generates a thresholded list (default threshold set by thresh in ilne 154 as top 5%) of all the connectioned between subreddits - if the connection is over threshold, the subreddit pair is recorded along with the difference from the threshold (to give a lower weight for worse connection, in the next script). This is repeated for each week, and successively added to the end of the table, to get at time-resolved picture of the subreddits and their edges, which can be used in the next step.
+
+# igraphAnim_timeResGexf_communityWordTable.R
+This unecessarily-lengthily-named script handles the production of the files to be displayed (gexfs) as well as determining communities, and the words which define them.
+It requires reading in of the thresholded table of edges, a list of subreddit sizes by word, the word frequency table for that week, and the reddit total lexicon for each week, all of which will have been previously generated. 
+The full thresholded list of all subreddits is loaded into an igraph object, and subreddits which have zero size at that time are displayed "invisibly" in the final graph (to make animation easier). The igraph object g is then used for all subsequent manipulation.
+The colour palette used is for light backgrounds - this can be altered to contain whatever colours you would like, but as there are 15+ communities, this can be difficult.
+Communities are determined with a fastgreedy community finder, and assigned colours based on their communnity index. The word use in community subreddits is the aggregated and compared to the main reddit lexicon in lines 149 and 150, to isolate the top 10 words for the subreddit. After determination of the representative words, the graph at that time is output, along with the representative word set and the list of subreddits above threshold for that time, for display.
+
+
+
+
+
+
+
+
+
+
+

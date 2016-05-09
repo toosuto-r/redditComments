@@ -5,9 +5,12 @@ library("RColorBrewer")
 library("rgexf")
 library("colorspace")
 
+baseDir<-"~/R/data/rcomments/"
+topSubTableFile<-"~/R/data/rcomments/topSubs300-dates_recent.txt"
+
 #load the edges with time stamp
 #there are three columns in edges: id1,id2,time
-edges <- read.table("~/R/data/rcomments/subRelTable_remote_recent_2016-01-04_thresh_1only.txt",header=T,sep=",")
+edges <- read.table("~/R/data/rcomments/subRelTable_remote_recent_2016-01-04_thresh.txt",header=T,sep=",")
 
 #generate the full graph with all nodes (not used for plotting)
 g <- graph.data.frame(edges,directed=F)
@@ -39,7 +42,7 @@ col_blank<-c(128,128,128,0)
 
 
 # read in the sizes of all subreddits to convert to node size later
-subSizes <- read.table("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates_recent.txt",header=TRUE, sep = ",")
+subSizes <- read.table("~/R/data/rcomments/subSizes_allDates_recent.txt",header=TRUE, sep = ",")
 
 # set starting time as the first time in the column
 ti <- min(edges$time)
@@ -60,7 +63,7 @@ dt <- 1
 nodes_col<-as.data.frame(matrix(nrow=vcount(gt),ncol=4))
 
 # load in the top subs with counts for community drill-down
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates_recent.txt"
+fName<-topSubTableFile
 topSubTable<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
 
 
@@ -74,12 +77,12 @@ for(time in seq(ti,total_time,dt)){
   totalComm<-sum(subSizes[,2*floor(time)])
   
   # get the full word table for this time
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[time],".txt",sep="")
+  fName<-paste(baseDir,"freqTable_remote_recent_",names(topSubTable)[time],".txt",sep="")
   freqTable<-read.table(fName,sep=",",check.names=FALSE)
   
   
   #get the current lexicon for community analysis
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/lexicon_recent_",names(topSubTable)[time],".txt",sep="")
+  fName<-paste(baseDir,"lexicon_recent_",names(topSubTable)[time],".txt",sep="")
   thisLexicon<-read.table(fName,sep=",")
   thisLexicon[,2]<-thisLexicon[,2]/sum(thisLexicon[,2])*100
   
@@ -99,6 +102,8 @@ for(time in seq(ti,total_time,dt)){
   # nodes_size<-log(log(log(subSizes[match(V(gt)$name,subSizes[,floor(time)*2-1]),floor(time)*2]/totalComm+1)+1)+1)*1
   nodes_size<-log(subSizes[match(V(gt)$name,subSizes[,floor(time)*2-1]),floor(time)*2]/totalComm+1.02)*1
   # nodes_size[is.na(nodes_size)]<--Inf
+  
+  # AskReddit is too goddamn big
   nodes_size[is.na(nodes_size)]<-0
   if (nodes_size[1]>=(nodes_size[2]*1.5)){
     nodes_size[1]<-nodes_size[2]*1.5
@@ -158,10 +163,10 @@ for(time in seq(ti,total_time,dt)){
   
   thisCommunitySubList<-data.frame(thisCommunitySubListHolder,thisCommunityIndexHolder)
   thisCommunitySubList<-thisCommunitySubList[order(thisCommunitySubList[,1]),]
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/communityWords",names(topSubTable)[time],".txt",sep="")
+  fName<-paste(baseDir,"communityWords",names(topSubTable)[time],".txt",sep="")
   write.table(communityWords,fName,row.names=FALSE,sep=",")
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/communitySubList",names(topSubTable)[time],".txt",sep="")
+  fName<-paste("~/R/data/rcomments/communitySubList",names(topSubTable)[time],".txt",sep="")
   write.table(thisCommunitySubList,fName,row.names=FALSE,sep=",")
   
   # set each element of the frame for the zero-size nodes with the right blank colour element

@@ -1,63 +1,72 @@
 library(RPostgreSQL)
 setwd("~/R/data")
 
+# set the limit on the number of top words to be polled
+wordLim<-3000
 
 ptmMain<-proc.time()
 #set a placeholder frame for the weight data later, as well as the sub sizes
 timeLinkTmp<-data.frame(id1=double(),id2=double(),weight=double(),time=double())
 
-
-
-dateSet<-1
 ##connect to db and return test results
 
 ptm<-proc.time()
-#get pass
+# get the DB password
 pw<-getPass()
 
-#get the list of subreddits and their words
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates_recent.txt"
+# files to read
+topSubsFile<-"~/R/data/rcomments/topSubs300-dates_recent.txt"
+stopWordsFile<-"~/R/data/rcomments/englishStop.txt"
+
+# invariant files to write
+dbDataOut<-"~/R/data/rcomments/fullSubTableStop.txt"
+subSizeTableOut<-"~/R/data/rcomments/subSizes_allDates_recent.txt"
+
+
+# get the list of subreddits and their words
+fName<-topSubsFile
 topSubTable<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
 
-
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/englishStop.txt"
+# get the modified list of stop words
+fName<-stopWordsFile
 stopWords<-read.table(fName,sep=",",header = FALSE)
 
 lim<-nrow(topSubTable)
 dateLim<-dim(topSubTable)[2]
 
-wordLim<-3000
 
+# instantiate a table for holding the subreddit and their sizes for each date
 subSizeTable<-as.data.frame(matrix(nrow=lim,ncol=dateLim*2))
 
-#set a loop to run each date snapshot from the top subs for each date
+# set a loop to run each date snapshot from the top subs for each date
 for (dateSet in seq(1,dateLim)){
 
-    #connect to main comment database
+  #connect to main comment database
   drv<-dbDriver("PostgreSQL")
   con<- dbConnect(drv,host="remote.picodoc.org",port=12360,dbname="reddit",user="reddit",password=pw)
   
   
-  #define the query to return the pop. table (a list of all subs)
+  # define the query to return the pop. table (a list of all subs)
+  # ensure checking only subs which exist
   theseTopSubs<-topSubTable[,dateSet]
   noNASubList<-theseTopSubs[!is.na(theseTopSubs)]
   preSubs<-paste(noNASubList,collapse="','")
   subList<-paste("'",preSubs,"'",sep="")
   
-  # send one large query to get the full
+  # send one large query to get the full result set for this date
   currQuery<-paste("SELECT * FROM word_counts_recent WHERE subreddit IN (", subList, ") AND date='",names(topSubTable)[dateSet],"' ORDER BY subreddit, count DESC;",sep="")
   result<- dbSendQuery(con, statement = currQuery)
   dataOut <- fetch(result, -1)
   dbClearResult(dbListResults(con)[[1]])
   
-  #remove stop words (including "deleted" etc.)
+  # remove stop words (including "deleted" etc.)
   dataOut<-dataOut[-which(dataOut$word %in% stopWords[,1]),]
   
-  #write the pop. table for the current sub
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/fullSubTableStop.txt",sep="")
+  # write the pop. table for the current sub
+  fName<-dbDataOut
   write.table(dataOut,fName,sep=",")
   
-  dataOut<-read.table(fName,sep=",",header=TRUE)
+  # dataOut<-read.table(fName,sep=",",header=TRUE)
   
   dbDisconnect(con)
   
@@ -72,7 +81,7 @@ for (dateSet in seq(1,dateLim)){
   
   # run through all subs and merge into the current ever-larger word freq table
   # i.e. full outer join
-  # to make this more efficient, merge onto the first column only?
+  # NOTE to make this more efficient, merge onto the first column only and expand with rbind?
   for (p in seq(2,lim)){
     tmpSub<-currSub
     newSub<-dataOut[which(dataOut$subreddit %in% topSubTable[p,dateSet]),c("word","count")][1:wordLim,]
@@ -87,16 +96,17 @@ for (dateSet in seq(1,dateLim)){
   
   wordSums<-rowSums(freqTable[,2:dim(freqTable)[2]])
   thisLexicon<-data.frame(freqTable[,1],wordSums)
+  
   # run a loop and for each pairing calculate the difference in word use percentages 
   # and multiply by the sum of word use between them to favour high-ranking words
   # note zero in both does not contribute to the weight sum
   
   # additionally, record the sub sizes along with the sub
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
+  fName<-paste("~/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(freqTable,fName,sep=",")
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/lexicon_recent_",names(topSubTable)[dateSet],".txt",sep="")
+  fName<-paste("~/R/data/rcomments/lexicon_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(thisLexicon,fName,sep=",")
   
   cat("time elapsed for table merge (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
@@ -104,7 +114,7 @@ for (dateSet in seq(1,dateLim)){
   subRelTable<-as.data.frame(matrix(nrow=lim,ncol=lim))
   subSizeTable[,dateSet*2-1]<-topSubTable[,dateSet]
   
-  
+  # after calculating the weight for each match, put it in the subreddit relational table
   for(s in seq(1,lim-1)){
     subSizeTable[s,dateSet*2]<-sum(freqTable[,s+1])
     currPer<-freqTable[,s+1]/sum(freqTable[,s+1])*100
@@ -130,22 +140,17 @@ for (dateSet in seq(1,dateLim)){
   }
   
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
+  fName<-paste("~/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(subRelRound,fName,sep=",")
   
   
   cat("time elapsed subRelTable formation (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
   
-  ######################
-  ######################
-  
   # return a thresholded set of edges with associated IDs and times
-  
   matRes<-as.matrix(subRelTable)
   matRes<-log(matRes)
   
   #set the threshold at some reasonable appropriate value
-  # thresh<-as.double(quantile(matRes, na.rm=TRUE)[2]*0.5)
   thresh<-as.double(quantile(matRes, 0.05, na.rm=TRUE))
   
   
@@ -160,12 +165,10 @@ for (dateSet in seq(1,dateLim)){
   subNames<-row.names(subRelTable)
   subLim<-length(subNames)
   
+  #
   for (p in seq(1,subLim-1)){
-    
     for (q in seq(p+1,subLim)){
-      
       if (matRes[p,q]<=thresh){
-        
         count<-count+1
         fullCount<-fullCount+1
         
@@ -188,14 +191,14 @@ for (dateSet in seq(1,dateLim)){
   # then vertically cat to get a time-dynamic list
   timeLinkTmp<-rbind(timeLinkTmp,geTime)
   
-  fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],"_thresh.txt",sep="")
+  fName<-paste("~/R/data/rcomments/subRelTable_remote_recent_",names(topSubTable)[dateSet],"_thresh.txt",sep="")
   write.table(timeLinkTmp,fName,sep=",")
   
 }
 
 pw<-"disregard this"
 
-fName<-paste("C:/Users/Ryan/Documents/R/data/rcomments/subSizes_allDates_recent.txt",sep="")
+fName<-subSizeTableOut
 write.table(subSizeTable,fName,sep=",")
 
 cat("time elapsed, full process: ",(proc.time()-ptmMain)[3],"s.\n",sep="")

@@ -5,7 +5,8 @@ setwd("~/R/data")
 ##connect to db and return test results
 
 ptm<-proc.time()
-subLim
+subLim<-300
+topSubTableFile<-"~/R/data/rcomments/topSubs300-dates_full.txt"
 
 #get pass
 pw<-getPass()
@@ -23,19 +24,18 @@ cat("time elapsed for date fetch: ",(proc.time()-ptm)[3],"s.\n",sep="")
 
 ptm<-proc.time()
 
-topSubTable<-as.data.frame(matrix(nrow=subLim*2,ncol=dim(datesUsed)[1]*2))
+topSubTable<-as.data.frame(matrix(nrow=subLim,ncol=dim(datesUsed)[1]*2))
 
-
-
+# loop over each date, and query to return the top subLim subreddits
 for (p in seq(1,dim(datesUsed)[1])){
 currDate<-datesUsed[p,]
-currQuery<-paste("SELECT subreddit, SUM(count) from word_counts WHERE date='",currDate,"'GROUP BY subreddit ORDER BY sum DESC LIMIT ", subLim*2,sep="")
+currQuery<-paste("SELECT subreddit, SUM(count) from word_counts WHERE date='",currDate,"'GROUP BY subreddit ORDER BY sum DESC LIMIT ", subLim,sep="")
 result<- dbSendQuery(con, statement = currQuery)
 dataOut <- fetch(result, -1)
 dbClearResult(dbListResults(con)[[1]])
 
-if (dim(dataOut)[1]<=subLim*2) {
-  extender<-as.data.frame(matrix(nrow=subLim*2-dim(dataOut)[1],ncol=2))
+if (dim(dataOut)[1]<=subLim) {
+  extender<-as.data.frame(matrix(nrow=subLim-dim(dataOut)[1],ncol=2))
   names(extender)<-names(dataOut)
   dataOut<-rbind(dataOut,extender)
 }
@@ -48,7 +48,7 @@ dbDisconnect(con)
 
 names(topSubTable)[seq(1,dim(datesUsed)[1]*2,2)]<-datesUsed$date
 
-fName<-"C:/Users/Ryan/Documents/R/data/rcomments/topSubs300-dates_full.txt"
+fName<-topSubTableFile
 write.table(topSubTable,fName,sep=",")
 
 cat("time elapsed for top sub fetch: ",(proc.time()-ptm)[3],"s.\n",sep="")
