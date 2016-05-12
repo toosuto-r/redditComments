@@ -24,7 +24,7 @@ cat("time elapsed for date fetch: ",(proc.time()-ptm)[3],"s.\n",sep="")
 
 ptm<-proc.time()
 
-topSubTable<-as.data.frame(matrix(nrow=subLim,ncol=dim(datesUsed)[1]*2))
+topSubTable<-as.data.frame(matrix(nrow=subLim,ncol=dim(datesUsed)[1]))
 
 # loop over each date, and query to return the top subLim subreddits
 for (p in seq(1,dim(datesUsed)[1])){
@@ -40,13 +40,14 @@ if (dim(dataOut)[1]<=subLim) {
   dataOut<-rbind(dataOut,extender)
 }
 
-topSubTable[,(p*2)-1]<-dataOut$subreddit
-topSubTable[,(p*2)]<-dataOut$sum
+topSubTable[,p]<-dataOut$subreddit
+#topSubTable[,(p*2)-1]<-dataOut$subreddit
+#topSubTable[,(p*2)]<-dataOut$sum
 
 }
 dbDisconnect(con)
 
-names(topSubTable)[seq(1,dim(datesUsed)[1]*2,2)]<-datesUsed$date
+names(topSubTable)<-datesUsed$date
 
 fName<-topSubTableFile
 write.table(topSubTable,fName,sep=",")
