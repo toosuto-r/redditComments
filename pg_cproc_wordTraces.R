@@ -39,11 +39,11 @@ dateLim<-dim(topSubTable)[2]
 subSizeTable<-as.data.frame(matrix(nrow=lim,ncol=dateLim*2))
 
 
-startSet<-1
+startSet<-187
 if (startSet>1){
   fName<-paste("~/R/data/rcomments/lexicon_main.txt",sep="")
   mainLexicon<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
-  
+  startSet<-dim(mainLexicon)[2]
 }
 
 # create word traces for each week without subreddit distinction - full reddit lexicon
@@ -51,7 +51,7 @@ if (startSet>1){
 
 # set a loop to run each date snapshot from the top subs for each date
 for (dateSet in seq(startSet,dateLim)){
-  
+  ptm<-proc.time()
   #connect to main comment database
   drv<-dbDriver("PostgreSQL")
   con<- dbConnect(drv,host="remote.picodoc.org",port=12360,dbname="reddit",user="reddit",password=pw)
@@ -98,9 +98,13 @@ for (dateSet in seq(startSet,dateLim)){
     newSub<-dataOut[which(dataOut$subreddit %in% topSubTable[p,dateSet]),c("word","count")][1:wordLim,]
     currSub<-merge(tmpSub,newSub[!is.na(newSub[,2]),],by="word",all=TRUE)
   }
+  
+  rm(dataOut)
+  
   names(currSub)<-c("wordList",as.vector(topSubTable[,dateSet]))
   # freqTable<-currSub[order(currSub[,2], decreasing=TRUE),]
   freqTable<-currSub
+  rm(currSub)
   # currSub<-currSub[order(currSub[,c(as.vector(topSubTable$'2015-02-16'))], decreasing=TRUE),]
   freqTable[is.na(freqTable)]<-0
   
@@ -118,10 +122,10 @@ for (dateSet in seq(startSet,dateLim)){
   fName<-paste("~/R/data/rcomments/freqTable_remote_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(freqTable,fName,sep=",")
   
+  rm(freqTable)
+  
   fName<-paste("~/R/data/rcomments/lexicon_recent_",names(topSubTable)[dateSet],".txt",sep="")
   write.table(thisLexicon,fName,sep=",")
-
-  cat("time elapsed for table merge (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
   
   # Once we have the new lexicon, merge it onto a table of the last one
   # first time just push thisLex into mainLex
@@ -132,6 +136,8 @@ for (dateSet in seq(startSet,dateLim)){
   }
   
   names(mainLexicon)<-c("word",names(topSubTable)[1:dateSet])
+  
+  cat("time elapsed for table merge (",  names(topSubTable)[dateSet], "): ",(proc.time()-ptm)[3],"s.\n",sep="")
   
   fName<-paste("~/R/data/rcomments/lexicon_main.txt",sep="")
   write.table(mainLexicon,fName,sep=",")
