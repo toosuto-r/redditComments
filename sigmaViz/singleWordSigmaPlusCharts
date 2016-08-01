@@ -1,0 +1,609 @@
+<html>
+<head bgcolor="#025855">
+<meta charset="UTF-8">
+<style type="text/css">
+#graph-container {
+    max-width: 85%;
+    height: 65%;
+    background: #025855
+    }
+   
+table {
+    border-collapse: collapse;
+    border: 2px solid white;
+    margin: auto;
+    font: 0px sans-serif;
+    width: 63%
+}
+
+td {
+    padding: 5px;
+    border: 1px solid white;
+}
+
+#tableHolder {
+    position: absolute;
+    top: 70%;
+    left: 2%;
+    margin: auto;
+    font: 10px sans-serif;
+}
+
+#dateShowHolder {
+    position: absolute;
+    top: 65%;
+    left: 70%;
+    margin: auto;
+    width: 18%;
+}
+
+#linkChartHolder {
+    position: absolute;
+    top: 70%;
+    left: 500px;
+    margin: auto;
+    font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.bar {
+  fill: steelblue;
+  opacity: 0.5;
+}
+
+.bar2 {
+  fill: red;
+  opacity: 0.5;
+}
+
+.bar3 {
+  fill: steelblue;
+  opacity: 0.5;
+}
+
+.bar:hover {
+  fill: brown;
+}
+
+.bar2:hover {
+  fill: grey;
+}
+
+
+</style>
+</head>
+<body bgcolor="#FFFFFF">
+<div bgcolor="#025855" id="graph-container"></div>
+<button onclick="loopKill(intervalId)">Stop</button>
+<button onclick="startSigLoop(lup)">Resume</button>
+<script src="sigma.min.js"></script>
+<script src="sigma.parsers.gexf.min.js"></script>
+<script src="d3.min.js?v=3.2.8"></script>
+<script src="sigma.plugins.animate.min.js"></script>
+<div id="dateShowHolder"></div>
+<div id="linkChartHolder"></div>
+<div id="tableHolder">
+<script>
+
+// variables for the sigma plotter itself
+var i,
+    holder={
+        nodes: [],
+        edges: []
+    },
+    killSwitch=0,
+    step=0,
+    camOut,
+    edgeBool=false,
+    parseData0,
+    parseData1;
+
+// variables for the sigma control loop	and file loading
+var lupStart=3010,
+    lup=lupStart,
+    lupStep=10,
+    endLup=4370,
+    interestWord='DOGE',
+    filePrefix='rComm_thresh_test_actualTime_'+interestWord+'_static_',
+    file1,
+    file2,
+    timeStep=4500,
+    intervalId,
+    startTime=lup;
+
+// add an array of dates
+var d1= new Date(2007,9,15);
+var d2 = new Date(2016,1,22);
+var dateArray=[];
+
+while (d1<d2){
+    dateArray.push(d1)
+    d1=new Date(d1.setDate(
+            d1.getDate() + 7
+    ))
+}
+
+// start the main run
+startSigLoop(lup)
+
+    
+//define component converters for tricky non-hex colours
+function componentToHex(c) {	
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+function loopKill(intervalId) {
+    startTime=lup
+    clearInterval(intervalId)
+}
+
+function closest (num, arr) {
+    var curr = arr[0];
+    var diff = Math.abs (num - curr);
+    for (var val = 0; val < arr.length; val++) {
+        var newdiff = Math.abs (num - arr[val]);
+        if (newdiff < diff) {
+            diff = newdiff;
+            curr = arr[val];
+        }
+    }
+    var ind = arr.indexOf(curr)
+    return ind;
+} 
+  
+function type(d) {
+  d.date = formatDate.parse(d.date);
+  d.distUse = +d.distUse;
+  return d;
+}
+
+function typeBar(d) {
+  d.avCounts = +d.avCounts;
+  d.selectCounts = +d.selectCounts;
+  return d;
+}
+
+function bars(data){
+var bars = svgBar.selectAll(".bar2").data(data)
+
+    bars.transition()
+      .duration(500)
+      .attr("y", function(d) { return yBar(d.selectCounts); })
+      .attr("height", function(d) { return heightBar - yBar(d.selectCounts); })
+}
+
+// define the new table and give it a handle for use in the update function
+var tableMaker = d3.select("#dateShowHolder").append("table");
+
+function updateTable(dataIn){
+// define the new data entry
+var dateEntry = tableMaker.selectAll("tr").data(dataIn);
+
+dateEntry.enter().append("tr")
+
+dateEntry.text(function(d) { return d; });
+    
+d3.selectAll("tr").style("font", "12px sans-serif").style("padding","4px").style("background-color","aliceblue")
+d3.select("tr").style("font-weight","bold")
+
+dateEntry.exit().remove();
+
+}
+
+
+// create the chart for displaying the relational metric over time
+
+var margin = {top: 50, right: 0, bottom: 30, left: 50},
+    width = 480 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
+
+var formatDate = d3.time.format("%Y-%m-%d");
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var line = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.distUse); });
+
+var svg = d3.select("#tableHolder").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+        
+var dateAxis=[],
+    dataHolder,
+    heightPad=1.0;
+
+var clo=0,
+    xBar,
+    yBar,
+    svgBar,
+    gBar;
+
+
+// note could be restructured to have the interval function in the callback of this function - not really necessary, since this is a (faster-than-sigma, by a lot) one-time setup which only moves later
+
+d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_metric.txt", type, function(error, data) {
+  if (error) throw error;
+  
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  y.domain(d3.extent(data, function(d) { return d.distUse; }));
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text((d3.max(data, function(d) { return d.distUse; })).toPrecision(2));
+
+  var minDate=Date.parse(d3.min(data, function(d) { return d.date; }))
+  var maxDate=Date.parse(d3.max(data, function(d) { return d.date; }))
+  
+  svg.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("d", line);
+      
+  var d1 = minDate;
+  var d2 = maxDate; 
+
+  // make a date array for matching dates easily
+  while (d1<d2){
+      dateAxis.push(d1)
+      d1=d1+604800000
+    }
+  
+  dataHolder = d3.values(data)
+
+  posBar=svg.append("rect")
+    .attr("class", "bar3")
+    .attr("x", x(dataHolder[0].date))
+    .attr("width", 8)
+    .attr("y", 0)
+    .attr("height", height);
+
+
+  svg.on("click", function(data) {
+    coords = d3.mouse(this);
+    clo = closest(Date.parse(x.invert(coords[0])),dateAxis)
+    console.log(clo)
+    lup=lupStart+clo*10	
+    posBar.transition()
+      .duration(500)
+      .attr("transform", "translate("+x(dataHolder[clo].date)+","+0+")")
+  })
+
+});
+
+// after setting up the metric trace, set up the initial link breakdown 
+// chart, which can then be modified instead of being drawn anew
+
+var marginBar = {top: 0, right: 20, bottom: 30, left: 40},
+    widthBar = 400 - margin.left - margin.right,
+    heightBar = 300 - margin.top - margin.bottom;
+
+xBar = d3.scale.ordinal()
+    .rangeBands([10, widthBar], -0.1);
+
+yBar = d3.scale.linear()
+    .range([heightBar, 0]);
+
+var xAxisBar = d3.svg.axis()
+    .scale(xBar)
+    .orient("bottom")
+    .tickValues(d3.range(0.0, 25, 5));
+
+var yAxisBar = d3.svg.axis()
+    .scale(yBar)
+    .orient("left")
+    .ticks(5);
+
+svgBar = d3.select("#linkChartHolder").append("svg")
+    .attr("width", widthBar + marginBar.left + marginBar.right)
+    .attr("height", heightBar + marginBar.top + marginBar.bottom)
+    .append("g").attr("transform", "translate(" + marginBar.left + "," + marginBar.top + ")");
+
+d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_selectHist_"+ 3010 +".txt", typeBar, function(data) {
+
+    data=data.slice(0,51);
+    
+    // define the max ranges from the data - using heightPad factor give some breathing room
+    xBar.domain(data.map(function(d) { return d.mids; }));
+    yBar.domain([0, d3.max(data, function(d) { return d.avCounts*heightPad; })]);
+
+    svgBar.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + heightBar + ")")
+      .call(xAxisBar);	
+
+    svgBar.append("g")
+      .attr("class", "y axis")
+      .call(yAxisBar)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Counts");
+
+    gBar=svgBar.selectAll(".bar")
+      .data(data)
+      .enter().append("g")
+
+    gBar.append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d) { return xBar(d.mids); })
+      .attr("width", xBar.rangeBand()-0.5)
+      .attr("y", function(d) { return yBar(d.avCounts); })
+      .attr("height", function(d) { return heightBar - yBar(d.avCounts); });
+
+    gBar.append("rect")
+      .attr("class", "bar2")
+      .attr("x", function(d) { return xBar(d.mids); })
+      .attr("width", xBar.rangeBand()-0.5)
+      .attr("y", function(d) { return yBar(d.selectCounts); })
+      .attr("height", function(d) { return heightBar - yBar(d.selectCounts); });
+      
+});
+
+
+// this is the interval function controlling the sigma iteration
+// call the interval function until all the desired files have run
+
+function startSigLoop(startTime){
+    lup=startTime;
+    intervalId = setInterval(function(){
+        file1 = filePrefix+(endLup)+'.gexf';
+        file2 = filePrefix+"colSize_"+(lup)+'.txt';
+        file3 = filePrefix+"colSize_"+(lup+lupStep)+'.txt';
+        runTwoGex(file1,file2,file3);
+        console.log(lup)
+        lup=lup+lupStep;
+        
+        updateTable(["Current Week", dateArray[lup/10-2].toDateString()])
+        
+        clo=(lup-lupStart)/10
+        posBar.transition()
+          .duration(500)
+          .attr("transform", "translate("+x(dataHolder[clo].date)+","+0+")")
+
+        if(lup >= endLup){
+            clearInterval(intervalId);
+        }
+    },timeStep)
+}
+// define border renderer
+// We gave our own name 'border' to the custom renderer
+sigma.canvas.nodes.border = function(node, context, settings) {
+    var prefix = settings('prefix') || '';
+
+    context.fillStyle = node.color || settings('defaultNodeColor');
+    context.beginPath();
+    context.arc(
+        node[prefix + 'x'],
+        node[prefix + 'y'],
+        node[prefix + 'size'],
+        0,
+        Math.PI * 2,
+        true
+    );
+
+    context.closePath();
+    context.fill();
+
+    // Adding a border
+    context.lineWidth = node.borderWidth || 1;
+    context.strokeStyle = node.borderColor || '#025855';
+    context.stroke();
+};
+
+
+
+// define a new placeholder sigma
+s=new sigma();
+firstSig = new sigma();
+secondSig= new sigma();
+//main function which takes two files and animates between them - note always takes the NEXT set of edges - the result at the end of the animation is the real result!
+function runTwoGex(fileA,fileB,fileC){
+    s.graph.clear();
+    holder={
+        nodes:[],
+        edges:[]
+    }
+
+    //parse the first gexf, and pass it to firstSig. once done, initiate parse on second file
+    sigma.parsers.gexf(
+        fileA,firstSig,
+        function(){
+            d3.text(fileB, 
+            function(data){
+                parseData0 = d3.csv.parseRows(data)
+                d3.text(fileC, 
+                function(data){
+                    parseData1 = d3.csv.parseRows(data) 
+                    // pull values from the first graph for positional and edge information
+                    // then pull colour and size info from CSVs
+                    for (i=0; i<firstSig.graph.nodes().length; i++){
+                        o = {
+                            id: firstSig.graph.nodes()[i].id,
+                            label: firstSig.graph.nodes()[i].label,
+                            x: firstSig.graph.nodes()[i].x,
+                            y: firstSig.graph.nodes()[i].y,
+                            size: parseFloat(parseData0[i][4]),
+                            //color: rgbToHex(parseInt(parseData0[i][0].split("\t")[0]),parseInt(parseData0[i][0].split("\t")[1]),parseInt(parseData0[i][0].split("\t")[2])),
+                            color: rgbToHex(parseInt(parseData0[i][0]),parseInt(parseData0[i][1]),parseInt(parseData0[i][2])),
+                            second_x: firstSig.graph.nodes()[i].x,
+                            second_y: firstSig.graph.nodes()[i].y,
+                            second_size: parseFloat(parseData1[i][4]),
+                            second_color: rgbToHex(parseInt(parseData1[i][0]),parseInt(parseData1[i][1]),parseInt(parseData1[i][2]))
+                            //second_color: rgbToHex(parseInt(parseData1[i][0].split("\t")[0]),parseInt(parseData1[i][0].split("\t")[1]),parseInt(parseData1[i][0].split("\t")[2]))
+                        };
+                        // push these properties to the holder for plotting
+                        holder.nodes.push(o);
+                    };
+                    // pull the second set of edges in - no animation, just jump to the next set so the animation ends correctly
+                    // note - leaving this as secondSig will stop overloading everything with edges
+                    for (i=0; i<secondSig.graph.edges().length; i++){
+                        holder.edges.push({
+                        id: firstSig.graph.edges()[i].id,
+                        source: firstSig.graph.edges()[i].source,
+                        target: firstSig.graph.edges()[i].target
+                        })
+                    };
+                    
+                    s.refresh()
+                    
+                    //if there is a camera present, instead of updating, run the first s instance and make one. s is populated from previously noted nodes and edges now in holder.
+                    if (typeof camOut != "undefined"){
+                        s = new sigma({
+                            graph: holder,
+                            renderer: {
+                                camera: 'cam1',
+                                container: document.getElementById('graph-container'),
+                                type: 'canvas'
+                            },
+                            settings: {
+                                defaultEdgeType:'curve',
+                                defaultLabelColor: '#CCC',
+                                defaultLabelSize: 14,
+                                labelThreshold: 8,
+                                maxEdgeSize: 0.8,
+                                defaultNodeType: 'border',
+                                animationsTime: 1000,
+                                drawEdges: edgeBool
+                            }
+                        });
+                        
+                        // move the camera to the spot it was in the previous sig inst
+                        s.cameras.cam1.goTo({
+                            x:camOut.x,
+                            y:camOut.y,
+                            ratio:camOut.ratio				
+                        })
+                        
+                        s.refresh();
+                    }
+                    else{
+                        s = new sigma({
+                            graph: holder,
+                            renderer: {
+                                container: document.getElementById('graph-container'),
+                                type: 'canvas'
+                            },
+                            settings: {
+                                defaultEdgeType:'curve',
+                                defaultLabelColor: '#CCC',
+                                defaultLabelSize: 14,
+                                labelThreshold: 8,
+                                maxEdgeSize: 0.8,
+                                defaultNodeType: 'border',
+                                animationsTime: 1000,
+                                drawEdges: edgeBool
+                            }	
+                        });
+                    
+                        // add a camera, since one does not exist in this condition
+                        s.addCamera('cam1');
+                        s.refresh();
+                    }
+                    
+                    // clear h ASAP
+                    holder={
+                        nodes:[],
+                        edges:[]
+                    }		
+
+                    // Animate from the first set to the second set
+                    var prefix = 'second_';
+                    
+                    s.refresh();
+                    sigma.plugins.animate(
+                        s,
+                        {
+                            x: prefix + 'x',
+                            y: prefix + 'y',
+                            size: prefix + 'size',
+                            color: prefix + 'color'
+                        },
+                        {
+                            duration: 2000,
+                            onComplete: function(){
+                                /*
+                                Sig insts 0,1,2 are generated from firstSig and secondSig
+                                so 3 is generated, and kill ID is 4, then 4 is generated and
+                                3 must be killed, then 3 is refilled, 4 must be killed etc
+
+                                trying to kill non-extant insts gives an error, so killswitch
+                                ensures the first run has no kill.
+                                */
+                                var killInd = [3, 4][step = +!step];
+
+                                if (killSwitch>0){
+                                    sigma.instances(killInd).kill();
+                                } else {
+                                killSwitch++
+                                }
+
+                                // store the current camera values
+                                camOut=s.cameras.cam1;
+                            }
+                        }
+                    );
+                    
+                    d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_selectHist_"+ lup +".txt", typeBar, function(data) {
+
+                        data=data.slice(0,51);
+                        bars(data)
+                        
+                    })
+                    
+                })
+            });
+        }
+    );
+}
+
+
+</script>
+</body>
+</html>
