@@ -9,7 +9,7 @@ subLim<-300
 topSubTableFile<-"~/R/data/rcomments/topSubs300-dates_full.txt"
 
 #get pass
-pw<-getPass()
+pw<-getPass("remote")
 drv<-dbDriver("PostgreSQL")
 con<- dbConnect(drv,host="remote.picodoc.org",port=12360,dbname="reddit",user="reddit",password=pw)
 
