@@ -5,7 +5,7 @@
 ptm<-proc.time()
 
 # get the dates out
-dateSeq<-seq(as.Date("2007-10-15"),as.Date("2016-02-22"),"weeks")
+dateSeq<-seq(as.Date("2007-10-15"),as.Date("2016-06-13"),"weeks")
 filePrefix<-"~/R/data/rcomments/freqTable_remote_recent_"
 
 #define a holder for the time-resolved relational data
@@ -148,13 +148,12 @@ for (p in 1:length(dateSeq)){
   # then vertically cat to get a time-dynamic list
   timeLinkTmp<-rbind(timeLinkTmp,geTime)
   
-  fName<-paste("~/R/data/rcomments/subRelTable_remote_",dateSeq[p],"_thresh.txt",sep="")
-  write.table(timeLinkTmp,fName,sep=",")
-  
-  
 }
 
 print(proc.time()-ptm)
+
+fName<-paste("~/R/data/rcomments/subRelTable_remote_",dateSeq[p],"_thresh.txt",sep="")
+write.table(timeLinkTmp,fName,sep=",")
 
 # two is the (relatively simpler) coloration of this map to represent prevalance of a certain word
 

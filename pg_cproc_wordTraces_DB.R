@@ -25,6 +25,8 @@ subSizeTableOut<-"~/R/data/rcomments/subSizes_allDates_full.txt"
 # get the list of subreddits and their words
 fName<-topSubsFile
 topSubTable<-read.table(fName,sep=",",header = TRUE,check.names=FALSE)
+# flip it left-right, so newer columns are at higher indices
+topSubTable<-topSubTable[,c(1,seq(ncol(topSubTable),2))]
 
 # get the modified list of stop words
 fName<-stopWordsFile
@@ -49,14 +51,26 @@ currQuery<-"SELECT COUNT(*) FROM information_schema.columns WHERE table_name='le
 result<- dbSendQuery(con, statement = currQuery)
 dataOut <- fetch(result, -1)
 dbClearResult(dbListResults(con)[[1]])
+startSet<-as.numeric(dataOut)
+
+currQuery<-"SELECT * FROM lexicon LIMIT 1"
+result<- dbSendQuery(con, statement = currQuery)
+dataOut <- fetch(result, -1)
+
+
+##### TABLE REORDER #####
+# ONLY TO BE RUN IF TABLE IS IN REVERSE ORDER
+# currQuery<-paste("CREATE TABLE reorderlexicon AS SELECT ",paste("word",paste(rev(names(dataOut)[2:length(dataOut)]),collapse=", "),sep=", "), " FROM lexicon", sep="")
+# result<- dbSendQuery(con, statement = currQuery)
+# 
+# dbSendQuery(con,statement="DROP TABLE lexicon;")
+# dbSendQuery(con,statement="ALTER TABLE reorderlexicon RENAME TO lexicon;")
 
 dbDisconnect(con)
 
-
-startSet<-as.numeric(dataOut)
+startSet<-startSet+1
 
 # create word traces for each week without subreddit distinction - full reddit lexicon
-
 
 # set a loop to run each date snapshot from the top subs for each date
 for (dateSet in seq(startSet,dateLim)){
