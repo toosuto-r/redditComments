@@ -3,8 +3,8 @@
 <meta charset="UTF-8">
 <style type="text/css">
 #graph-container {
-    max-width: 85%;
-    height: 65%;
+    max-width: 80%;
+    height: 63%;
     background: #025855
     }
    
@@ -32,7 +32,7 @@ td {
 #dateShowHolder {
     position: absolute;
     top: 65%;
-    left: 70%;
+    right: 17%;
     margin: auto;
     width: 18%;
 }
@@ -43,6 +43,61 @@ td {
     left: 500px;
     margin: auto;
     font: 10px sans-serif;
+}
+
+#trumpHolder {
+    position: absolute;
+    top: 5%;
+    left: 80%;
+    width: 20%;
+    max-height: 15%;
+    text-align: center;
+    font: 20px sans-serif;
+    background-color: #025855;
+}
+
+#hillaryHolder {
+    position: absolute;
+    top: 25%;
+    left: 80%;
+    width: 20%;
+    max-height: 15%;
+    text-align: center;
+    font: 20px sans-serif;
+    background: #025855;
+}
+
+#sandersHolder {
+    position: absolute;
+    top: 46%;
+    left: 80%;
+    width: 20%;
+    max-height: 15%;
+    text-align: center;
+    font: 20px sans-serif;
+    background: #025855;
+}
+
+#infoHolder {
+    position: absolute;
+    top: 65%;
+    left: 80%;
+    max-width: 20%;
+    height: 28%;
+    text-align: justify;
+    font: 16px sans-serif;
+    background: #888888;
+}
+
+#selectBG {
+    position: absolute;
+    top: 1%;
+    left: 80%;
+    width: 20%;
+    height: 55%;
+    text-align: center;
+    font: 20px sans-serif;
+    background: #888888;
 }
 
 .axis path,
@@ -96,8 +151,13 @@ td {
 <script src="sigma.parsers.gexf.min.js"></script>
 <script src="d3.min.js?v=3.2.8"></script>
 <script src="sigma.plugins.animate.min.js"></script>
+<div id="infoHolder"></div>
+<div id="selectBG"></div>
 <div id="dateShowHolder"></div>
 <div id="linkChartHolder"></div>
+<div id="trumpHolder"></div>
+<div id="hillaryHolder"></div>
+<div id="sandersHolder"></div>
 <div id="tableHolder">
 <script>
 
@@ -115,21 +175,26 @@ var i,
     parseData1;
 
 // variables for the sigma control loop	and file loading
-var lupStart=3010,
+var lupStart=3810,
     lup=lupStart,
     lupStep=10,
-    endLup=4370,
-    interestWord='DOGE',
+    endLup=4530,
+    interestWord='TRUMP',
     filePrefix='rComm_thresh_test_actualTime_'+interestWord+'_static_',
     file1,
     file2,
-    timeStep=4500,
+    timeStep=5000,
     intervalId,
-    startTime=lup;
+    startTime=lup,
+    startSwitch=0;
 
+var helpText;
+    
+helpText ='Click one of the boxes above to switch between the different words. Click the "Resume" button to start the time animation, and the metric trace on the bottom left to jump to different points in time.'
+    
 // add an array of dates
 var d1= new Date(2007,9,15);
-var d2 = new Date(2016,1,22);
+var d2 = new Date(2016,6,13);
 var dateArray=[];
 
 while (d1<d2){
@@ -140,9 +205,36 @@ while (d1<d2){
 }
 
 // start the main run
-startSigLoop(lup)
-
-    
+//startSigLoop(lup)
+// or rather, start a community-coloured plot
+// load into the "s" instance of sigma, because it's this instance which will later be used in transitions
+// this reduces total sigInsts and mem overhead
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+s = new sigma({
+            renderer: {
+                container: document.getElementById('graph-container'),
+                type: 'canvas'
+            },
+                settings: {
+                defaultEdgeType:'curve',
+                defaultLabelColor: '#CCC',
+                defaultLabelSize: 14,
+                labelThreshold: 10,
+                maxEdgeSize: 0.8,
+                defaultNodeType: 'border',
+                animationsTime: 1000,
+                drawEdges: edgeBool
+                }	
+            });
+            
+// load the main gexf into s
+sigma.parsers.gexf(
+        (filePrefix+(lupStart-10)+'.gexf'),s, function(){
+            s.refresh()
+            s.addCamera('cam1');
+            camOut=s.cameras.cam1;
+        })
+                       
 //define component converters for tricky non-hex colours
 function componentToHex(c) {	
     var hex = c.toString(16);
@@ -196,6 +288,13 @@ var bars = svgBar.selectAll(".bar2").data(data)
 // define the new table and give it a handle for use in the update function
 var tableMaker = d3.select("#dateShowHolder").append("table");
 
+function selectMover(chosenMove){
+    trumpClick.style('left','80%').style('width','20%').style('background-color','#FFBBAA').style('color','black')
+    hillClick.style('left','80%').style('width','20%').style('background-color','#FFBBAA').style('color','black')
+    sandClick.style('left','80%').style('width','20%').style('background-color','#FFBBAA').style('color','black')
+    chosenMove.style('left','78%').style('width','22%').style('background-color','#025855').style('color','white')
+};
+
 function updateTable(dataIn){
 // define the new data entry
 var dateEntry = tableMaker.selectAll("tr").data(dataIn);
@@ -211,12 +310,31 @@ dateEntry.exit().remove();
 
 }
 
+// create the word selection panels on the right, with associated d3 handles
+//var trumpClick = d3.select("#trumpHolder").style('background-color','#802010').text("TRUMP").style('padding', '3% 0');
+//var hillClick = d3.select("#hillaryHolder").style('background-color','#104080').text("HILLARY").style('padding', '3% 0');
+//var sandClick = d3.select("#sandersHolder").style('background-color','#108040').text("SANDERS").style('padding', '3% 0');
+
+
+var trumpClick = d3.select("#trumpHolder").style('background-color','#FFBBAA').text("TRUMP").style('padding', '3% 0');
+var hillClick = d3.select("#hillaryHolder").style('background-color','#FFBBAA').text("HILLARY").style('padding', '3% 0');
+var sandClick = d3.select("#sandersHolder").style('background-color','#FFBBAA').text("SANDERS").style('padding', '3% 0');
+
+d3.select("#infoHolder").style('background-color','#FFFCE9').style('padding', '2%').text(helpText);
+d3.select("#selectBG").style('background-color','#FFFCE9').style('padding', '3% 0')
+
+
+var trumpMetric,
+    hillaryMetric,
+    sandersMetric;
 
 // create the chart for displaying the relational metric over time
 
-var margin = {top: 50, right: 0, bottom: 30, left: 50},
-    width = 480 - margin.left - margin.right,
-    height = 300 - margin.top - margin.bottom;
+var margin = {top: 0, right: 10, bottom: 30, left: 50},
+    width = Math.floor(window.innerWidth*0.30) - margin.left - margin.right,
+    height = Math.floor(window.innerHeight*0.28) - margin.top - margin.bottom;
+    //width = 480 - margin.left - margin.right,
+    //height = 300 - margin.top - margin.bottom;
 
 var formatDate = d3.time.format("%Y-%m-%d");
 
@@ -228,7 +346,9 @@ var y = d3.scale.linear()
 
 var xAxis = d3.svg.axis()
     .scale(x)
-    .orient("bottom");
+    .orient("bottom")
+    .tickFormat(d3.time.format("%y-%m"))
+    //.ticks(9);
 
 var yAxis = d3.svg.axis()
     .scale(y)
@@ -241,10 +361,12 @@ var line = d3.svg.line()
 var svg = d3.select("#tableHolder").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
+    .append("g").attr("transform", "translate(" + 50 + "," + margin.top + ")")
+    //.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
         
 var dateAxis=[],
     dataHolder,
-    heightPad=1.0;
+    heightPad=1.3;
 
 var clo=0,
     xBar,
@@ -255,31 +377,56 @@ var clo=0,
 
 // note could be restructured to have the interval function in the callback of this function - not really necessary, since this is a (faster-than-sigma, by a lot) one-time setup which only moves later
 
-d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_metric.txt", type, function(error, data) {
+d3.csv("rComm_thresh_test_actualTime_HILLARY_metric.txt", type, function(error, data) {
+    hillaryMetric=data;
+})
+
+d3.csv("rComm_thresh_test_actualTime_SANDERS_metric.txt", type, function(error, data) {
+    sandersMetric=data;
+})
+
+var metricPlot = d3.csv("rComm_thresh_test_actualTime_TRUMP_metric.txt", type, function(error, data) {
   if (error) throw error;
   
+  // put all the metrics in an array to be accessed when switching
+  trumpMetric = data;
+  
+  metricGroup=data;
   x.domain(d3.extent(data, function(d) { return d.date; }));
   y.domain(d3.extent(data, function(d) { return d.distUse; }));
 
   svg.append("g")
       .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
+      .attr("transform","translate(0," + height + ")")
+      .call(xAxis)
+      .selectAll("text")
+          .attr("y", 0)
+          .attr("x", 15)
+          .attr("dy", "1.5em")
+          .attr("transform", "rotate(45)")
+      .append("text")
+      .attr("x", widthBar*0.5+marginBar.left)
+      .attr("y", 20)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Date");
 
   svg.append("g")
       .attr("class", "y axis")
       .call(yAxis)
+      .attr("transform", "translate(" + 0 + ",0)")
     .append("text")
       .attr("transform", "rotate(-90)")
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
-      .text((d3.max(data, function(d) { return d.distUse; })).toPrecision(2));
+      .text("Spread Metric")
+      //.text((d3.max(data, function(d) { return d.distUse; })).toPrecision(2));
 
   var minDate=Date.parse(d3.min(data, function(d) { return d.date; }))
   var maxDate=Date.parse(d3.max(data, function(d) { return d.date; }))
   
-  svg.append("path")
+  lineTrace = svg.append("path")
       .datum(data)
       .attr("class", "line")
       .attr("d", line);
@@ -302,7 +449,15 @@ d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_metric.txt", type, functio
     .attr("y", 0)
     .attr("height", height);
 
-
+  // add a transparent rectangle to allow clicking of the otherwise inaccessible g-element
+  svg.append('rect')
+  .attr('x', 0)
+  .attr('y', 0)
+  .attr('width', width)
+  .attr('height', height)
+  .attr('opacity','0')
+  
+  
   svg.on("click", function(data) {
     coords = d3.mouse(this);
     clo = closest(Date.parse(x.invert(coords[0])),dateAxis)
@@ -312,15 +467,16 @@ d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_metric.txt", type, functio
       .duration(500)
       .attr("transform", "translate("+x(dataHolder[clo].date)+","+0+")")
   })
-
 });
 
 // after setting up the metric trace, set up the initial link breakdown 
 // chart, which can then be modified instead of being drawn anew
 
 var marginBar = {top: 0, right: 20, bottom: 30, left: 40},
-    widthBar = 400 - margin.left - margin.right,
-    heightBar = 300 - margin.top - margin.bottom;
+    widthBar = Math.floor(window.innerWidth*0.4) - marginBar.left - marginBar.right,
+    heightBar = Math.floor(window.innerHeight*0.28) - marginBar.top - marginBar.bottom;
+    //widthBar = 400 - margin.left - margin.right,
+    //heightBar = 300 - margin.top - margin.bottom;
 
 xBar = d3.scale.ordinal()
     .rangeBands([10, widthBar], -0.1);
@@ -354,7 +510,13 @@ d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_selectHist_"+ 3010 +".txt"
     svgBar.append("g")
       .attr("class", "x axis")
       .attr("transform", "translate(0," + heightBar + ")")
-      .call(xAxisBar);	
+      .call(xAxisBar)
+      .append("text")
+      .attr("x", widthBar*0.5+marginBar.left)
+      .attr("y", 20)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Lexical Separation");;	
 
     svgBar.append("g")
       .attr("class", "y axis")
@@ -386,14 +548,69 @@ d3.csv("rComm_thresh_test_actualTime_"+interestWord+"_selectHist_"+ 3010 +".txt"
       
 });
 
+trumpClick.on("click", function(){
+    console.log("TROMPE")
+    interestWord="TRUMP"
+    filePrefix='rComm_thresh_test_actualTime_'+interestWord+'_static_'
+    lineTrace.remove()
+    lineTrace = svg.append("path")
+      .datum(trumpMetric)
+      .attr("class", "line")
+      .attr("d", line);
+    selectMover(trumpClick)
+})
 
+hillClick.on("click", function(){
+    console.log("HILAR")
+    interestWord="HILLARY"
+    filePrefix='rComm_thresh_test_actualTime_'+interestWord+'_static_'
+    lineTrace.remove()
+    lineTrace = svg.append("path")
+      .datum(hillaryMetric)
+      .attr("class", "line")
+      .attr("d", line);
+    selectMover(hillClick)
+})
+
+sandClick.on("click", function(){
+    console.log("SANDY")
+    interestWord="SANDERS"
+    filePrefix='rComm_thresh_test_actualTime_'+interestWord+'_static_'
+    lineTrace.remove()
+    lineTrace = svg.append("path")
+      .datum(sandersMetric)
+      .attr("class", "line")
+      .attr("d", line);
+    selectMover(sandClick)
+})
 // this is the interval function controlling the sigma iteration
 // call the interval function until all the desired files have run
 
+
+selectMover(trumpClick);
+
+
 function startSigLoop(startTime){
     lup=startTime;
+    
+    if (startSwitch===0){
+        s.cameras.cam1.goTo({
+                        x:camOut.x,
+                        y:camOut.y,
+                        ratio:camOut.ratio				
+        })
+        s.refresh()
+        startSwitch++
+        console.log('startCam')
+        s.graph.clear()
+    }
+    
     intervalId = setInterval(function(){
-        file1 = filePrefix+(endLup)+'.gexf';
+        if(lup >= (endLup-10)){
+            console.log('kill loop')
+            clearInterval(intervalId);
+        } 
+        file1 = 'rComm_thresh_test_actualTime_TRUMP_static_'+(lupStart-10)+'.gexf';
         file2 = filePrefix+"colSize_"+(lup)+'.txt';
         file3 = filePrefix+"colSize_"+(lup+lupStep)+'.txt';
         runTwoGex(file1,file2,file3);
@@ -407,9 +624,7 @@ function startSigLoop(startTime){
           .duration(500)
           .attr("transform", "translate("+x(dataHolder[clo].date)+","+0+")")
 
-        if(lup >= endLup){
-            clearInterval(intervalId);
-        }
+        
     },timeStep)
 }
 // define border renderer
@@ -437,10 +652,10 @@ sigma.canvas.nodes.border = function(node, context, settings) {
     context.stroke();
 };
 
-
+var parseData0;
 
 // define a new placeholder sigma
-s=new sigma();
+//s=new sigma();
 firstSig = new sigma();
 secondSig= new sigma();
 //main function which takes two files and animates between them - note always takes the NEXT set of edges - the result at the end of the animation is the real result!
@@ -506,7 +721,7 @@ function runTwoGex(fileA,fileB,fileC){
                                 defaultEdgeType:'curve',
                                 defaultLabelColor: '#CCC',
                                 defaultLabelSize: 14,
-                                labelThreshold: 8,
+                                labelThreshold: 10,
                                 maxEdgeSize: 0.8,
                                 defaultNodeType: 'border',
                                 animationsTime: 1000,
@@ -534,7 +749,7 @@ function runTwoGex(fileA,fileB,fileC){
                                 defaultEdgeType:'curve',
                                 defaultLabelColor: '#CCC',
                                 defaultLabelSize: 14,
-                                labelThreshold: 8,
+                                labelThreshold: 10,
                                 maxEdgeSize: 0.8,
                                 defaultNodeType: 'border',
                                 animationsTime: 1000,
